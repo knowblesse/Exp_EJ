@@ -10,7 +10,7 @@ arguments
 end
 
 BASEPATH = "D:\Data\Kim Data";
-addpath('Lib/Neuralynx/');
+addpath('lib/Neuralynx/');
 
 %% Get filepaths
 if tankPath == ''
