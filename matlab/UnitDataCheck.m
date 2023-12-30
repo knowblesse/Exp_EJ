@@ -32,7 +32,7 @@ end
 clearvars p_;
 
 %% Read unit file
-fprintf("UnitDataCheck: Loading unit data\n");
+fprintf("generateEventClassifierDataset : Loading unit data\n");
 unitData = table([], [], {}, 'VariableName', {'unitNumber', 'numSpike', 'time_ms'});
 
 unitNumber = 1;
@@ -46,10 +46,16 @@ for unitFilePath = unitFilePaths
 
     % Separate Unit Data
     unitType = unique(CellNumbers);
-    numUnit = numel(unitType);
-    for i = 1 : numUnit
+    numUnit_ = numel(unitType);
+    for i = 1 : numUnit_
         temp_ = Timestamps(CellNumbers == unitType(i))'; % selected unit's timestamps
         temp_ = (temp_ - expStat.startTS) / 1000; % timestamp to relative ms
+
+        % Check if all spike occur after startTS.
+        % => sometimes, spike occur before expStat.startTS. remove such data.
+        temp_ = temp_(temp_ > 0);
+        
+        % Turn it into table
         unitData = [unitData; table(...
             unitNumber,...
             numel(temp_),...
@@ -59,27 +65,10 @@ for unitFilePath = unitFilePaths
         unitNumber = unitNumber + 1;
     end
 end
-clearvars numUnit i unitFilePath unitType unitFilePaths temp_
-fprintf("UnitDataCheck: All unit data loaded\n");
+numUnit = size(unitData, 1);
+clearvars numunit i unitfilepath unittype unitfilepaths temp_ numUnit_
+fprintf("generateEventclassifierdataset : all unit data loaded\n");
 
-%% Create cell array
-unitId = 2;
-TIMEWINDOW = int64([-2000, +2000]); % in ms
-P_times = {};
-NP_times = {};
-for trial = 1 : 10
-    if eventData(trial).isE == true
-        continue;
-    end
-
-    window = eventData(trial).P + TIMEWINDOW;
-    idx = find(all([window(1) <= unitData.timestamps{unitId}, unitData.timestamps{unitId} < window(2)], 2));
-    P_times = [P_times; unitData.timestamps{unitId}(idx) - double(eventData(trial).P)];
-
-    window = eventData(trial).NP + TIMEWINDOW;
-    idx = find(all([window(1) <= unitData.timestamps{unitId}, unitData.timestamps{unitId} < window(2)], 2));
-    NP_times = [NP_times; unitData.timestamps{unitId}(idx) - double(eventData(trial).NP)];
-end
 
 %%
 fig1 = figure();
