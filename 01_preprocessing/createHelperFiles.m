@@ -10,7 +10,7 @@ arguments
 end
 
 BASEPATH = "D:\Data\Kim Data";
-addpath('lib/Neuralynx/');
+addpath('../lib/Neuralynx/');
 
 %% Get filepaths
 if tankPath == ''
@@ -54,6 +54,8 @@ startTimeStamp = TimeStamps(1);
 
 %% Read unit file
 numUnit = 0;
+numBLAUnit = 0;
+numPLUnit = 0;
 for unitFilePath = unitFilePaths
     [Timestamps, ScNumbers, CellNumbers, Features, Samples] = Nlx2MatSpike(...
         unitFilePath{1},...
@@ -61,6 +63,18 @@ for unitFilePath = unitFilePaths
         0,... %Extract Header
         1);
     numUnit = numUnit + numel(unique(CellNumbers));
+    regResult = regexp(unitFilePath{1}, '(?<sessionName>@AP.*)\\(?<region>(BLA|PFC)).*TT(?<electrodeNumber>\d\d).\w\w\w', 'names');
+    if strcmp(regResult.region, 'BLA')
+        if str2double(regResult.electrodeNumber) > 6
+            error("BLA unit with electrode number > 6");
+        end
+        numBLAUnit = numBLAUnit + numel(unique(CellNumbers));
+    elseif strcmp(regResult.region, 'PFC') 
+        if str2double(regResult.electrodeNumber) <= 6
+            error("PL unit with electrode number <= 6");
+        end
+        numPLUnit = numPLUnit + numel(unique(CellNumbers));
+    end
 end
 
 %% Generate time2TS matrix
@@ -99,6 +113,8 @@ end
 expStat = struct();
 expStat.numVideo = numVideofile;
 expStat.numUnit = numUnit;
+expStat.numBLAUnit = numBLAUnit;
+expStat.numPLUnit = numPLUnit;
 expStat.startTS = startTimeStamp;
 save(fullfile(tankPath, strcat(tankName, '_helper.mat')), "expStat", "time2TS", "time2TS_filename");
 

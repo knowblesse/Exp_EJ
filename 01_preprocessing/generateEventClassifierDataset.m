@@ -1,20 +1,25 @@
-function [X, y] = generateEventClassifierDataset(tankPath, timewindow, timewindow_bin, kernel_size, kernel_std)
+function [X, y] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, timewindow, timewindow_bin, kernel_size, kernel_std)
 %% generateEventClassifierDataset()
-% generate dataset for event(head entry, avoid, escape) classifier
+% Generalized dataset generator. This function takes two event times,
+% eventTime1 and eventTime2, and parse neural data.
 % tank_location : string. location of tank
+% eventTime1 : 1D array. timepoint of event 1 (ms)
+% eventTIme2 : 1D array. timepoint of event 2 (ms)
 % timewindow : [TIMEWINDOW_LEFT(ms), TIMEWINDOW_RIGHT(ms)] default=[-1000, +1000](ms)
 % timewindow_bin : bin size(ms) of the window. reshape function is used for binning. default=100(ms)
 % kernel_size : size of the gaussian kernel. default= 1000(ms)
 % kernel_width : width(std) of the gaussian kernel. default=100(ms)
 arguments
     tankPath string = ''
+    eventTime1 = []
+    eventTime2 = []
     timewindow (1,2) = [-2000, +2000]
     timewindow_bin = 100
     kernel_size = 1000;
     kernel_std = 100;
 end
 
-BASEPATH = "D:\Data\Kim Data";
+BASEPATH = "H:\Data\Kim Data";
 addpath('lib/Neuralynx/');
 
 %% Get filepaths
@@ -33,12 +38,6 @@ unitFilePaths = glob(tankPath, '\.(N|n)(T|t)(T|t)', true);
 load(fullfile(tankPath, strcat(tankName, '_helper.mat')));
 if ~all([exist('expStat', 'var'), exist('time2TS', 'var'), exist('time2TS_filename', 'var')])
     error("Helper file not loaded properly")
-end
-
-%% Load event file
-load(fullfile(tankPath, strcat(tankName, '_event.mat')));
-if ~exist('eventData', 'var')
-    error("Event data not loaded properly")
 end
 
 %% Read unit file
@@ -71,7 +70,7 @@ for unitFilePath = unitFilePaths
             numel(temp_),...
             {temp_},...
             'VariableName', {'unitNumber', 'numSpike', 'time_ms'})];
-        fprintf("UnitDataCheck: Unit %d data loaded\n", unitNumber);
+        %fprintf("UnitDataCheck: Unit %d data loaded\n", unitNumber);
         unitNumber = unitNumber + 1;
     end
 end
@@ -83,22 +82,17 @@ fprintf("generateEventclassifierdataset : all unit data loaded\n");
 kernel = gausswin(ceil(kernel_size/2)*2-1, (kernel_size - 1) / (2 * kernel_std)); % kernel size is changed into an odd number for symmetrical kernel application. see Matlab gausswin docs for the second parameter.
 
 %% Generate Array for Data
-warning('P vs NP in pre-robot session');
 windowsize = diff(timewindow);
 binnedDataSize = windowsize / timewindow_bin;
-numData = numUnit * binnedDataSize;
 
-% Check valid trials
-validTrials = find(~cell2mat({eventData(1:10).isE}));
-numTrial = numel(validTrials); 
-
-X = cell(numTrial*2, numData);
-y = zeros(numTrial * 2, 1);
+%% Preallocate Dataset variable
+X = cell(numel(eventTime1) + numel(eventTime2), numUnit);
+y = zeros(numel(eventTime1) + numel(eventTime2), 1);
 
 %% Load Unit and apply Generate Serial Data from spike timestamps(fs:1000)
 for u = 1 : numUnit
     % use max(10s from the last spike, 10s from the last NP) as the length of the serial data
-    serial_data = zeros(max(round(unitData.time_ms{u}(end)), eventData(end).NP + 10),1);
+    serial_data = zeros(max(round(unitData.time_ms{u}(end)), max(eventTime1(end), eventTime2(end)) + 10000),1);
     
     % set 1 for every spike timepoint. But only take positive values
     serial_data(round(unitData.time_ms{u})) = 1;
@@ -113,53 +107,53 @@ for u = 1 : numUnit
     
     clearvars serial_data_kerneled
 
-    %% Divide by EVENT Marker
-    P = cell(numTrial,1);
-    NP = cell(numTrial,1);
-    
-    for trial = validTrials
-        % Get Peri-Event Window
-        P_window = round(timewindow + double(eventData(trial).P));
-        NP_window = round(timewindow + double(eventData(trial).NP));
-
+    %% Select data around event time
+    event1_data = cell(numel(eventTime1), 1);
+    for i_time = 1 : numel(eventTime1)
+        signal_window = round(timewindow + eventTime1(i_time));
         % Check if the window is out of range
-        if (P_window(1) >= 1) && (P_window(2) <= numel(whole_serial_data))
-            % Since the index of the whole_serial_data is actual timepoint in ms,
-            % retrive the value in the window by index.
-            P{trial} = mean(reshape(...
-                (conv(serial_data(P_window(1)+1:P_window(2)),kernel,'same') - serial_data_mean) ./ serial_data_std,...
+        if (signal_window(1) >= 1) && (signal_window(2) <= numel(whole_serial_data))
+            % The index of the whole_serial_data is actual timepoint in ms.
+            % So retrive the value in the window by index.
+            event1_data{i_time} = mean(reshape(...
+                (conv(serial_data(signal_window(1)+1:signal_window(2)),kernel,'same') - serial_data_mean) ./ serial_data_std,...
                 timewindow_bin, binnedDataSize), 1);
         end
+    end
 
-        if (NP_window(1) >= 1) && (NP_window(2) <= numel(whole_serial_data))
-            NP{trial} = mean(reshape(...
-                (conv(serial_data(NP_window(1)+1:NP_window(2)),kernel,'same') - serial_data_mean) ./ serial_data_std,...
+    event2_data = cell(numel(eventTime2), 1);
+    for i_time = 1 : numel(eventTime2)
+        signal_window = round(timewindow + eventTime2(i_time));
+        % Check if the window is out of range
+        if (signal_window(1) >= 1) && (signal_window(2) <= numel(whole_serial_data))
+            % The index of the whole_serial_data is actual timepoint in ms.
+            % So retrive the value in the window by index.
+            event2_data{i_time} = mean(reshape(...
+                (conv(serial_data(signal_window(1)+1:signal_window(2)),kernel,'same') - serial_data_mean) ./ serial_data_std,...
                 timewindow_bin, binnedDataSize), 1);
         end
     end
     
     %% Remove Empty Data resulted by index out of the range
-    % ex. when you generate -8 ~ -6s offset data, -8 sec goes behind the exp start time in the first
-    % trial. 
-    P = P(~cellfun('isempty',P));
-    NP = NP(~cellfun('isempty',NP));
+    % If a timewindow is near the edge of a dataset, eventX_data{} is empty.
+    event1_data = event1_data(~cellfun('isempty',event1_data));
+    event2_data = event2_data(~cellfun('isempty',event2_data));
     
     %% Save Data
     % if the dataset size is reduced because of the index output the range issue, reinitialize the X
     % Main loop of this code is based on unit. So if the index issue occurs, from the first unit, the
     % size of the X will be changed. From the next unit, since the X size match,, size changing code
     % part will not run.
-    if size([P; NP], 1) ~= size(X,1) 
-        X = cell(size([P; NP], 1), numUnit_);
+    if numel(event1_data) + numel(event2_data) ~= size(X,1) 
+        X = cell(numel(event1_data) + numel(event2_data), numUnit);
+        warning("dataset size has changed")
     end
-    X(:,u) = [P; NP];
+    X(:,u) = [event1_data; event2_data];
 end
+
+y = [1*ones(numel(event1_data), 1); 2*ones(numel(event2_data),1)];
 
 %% Generate X array
 X = cell2mat(X);
-
-%% Generate y array
-y = [1*ones(numTrial,1);...
-     2*ones(numTrial,1)];
 fprintf('generateEventClassifierDataset : Complete %s\n',tankName)
 end

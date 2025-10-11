@@ -1,11 +1,10 @@
 %% UnitDataCheck
-BASEPATH = "D:\Data\Kim Data";
+BASEPATH = "H:\Data\Kim Data";
 addpath('lib/Neuralynx/');
 
 %% Get filepaths 
 %tankPath = uigetdir(BASEPATH);
-warning('MO');% manual override
-tankPath = "D:\Data\Kim Data\@AP18_031418";
+tankPath = "H:\Data\Kim Data\@AP18_031418";
 tankName = regexp(tankPath, '\\(?:|#|##|$#|@)(AP.*)$', 'tokens');
 tankName = tankName{1}{1};
 

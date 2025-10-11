@@ -1,16 +1,15 @@
-%% saveEventTime
+%% saveEventTimestamp
 % 2023 Ji Hoon Jeong
 % Function for reading bookmark file,
 % check bookmark integrity,
 % and save it in a time from the exp. start in ms. 2023DEC20
 % Remember that "Time" means the relative time in ms from the expStat.startTS timestamp 
-function saveEventTime(tankPath)
+function saveEventTimestamp(tankPath)
 arguments
     tankPath string = ''
 end
 
-BASEPATH = "D:\Data\Kim Data";
-addpath('lib/Neuralynx/');
+BASEPATH = "H:\Data\Kim Data";
 
 %% Get filepaths
 if tankPath == ''
@@ -73,7 +72,9 @@ for b_idx = 1 : numel(bookmarkFilePaths)
         trial = str2double(temp_.trial);
         pelletType = string(temp_.type);
         time = str2double(temp_.time);
-        if trial > 10
+
+        % During robot phase & P pellet, add attempt data
+        if trial > 10 && strcmp(pelletType, 'P')
             attempt = str2double(temp_.attempt);
         else
             attempt = 0;
@@ -147,7 +148,7 @@ for trial = 11 : 20
 end
 
 %% Save
-save(fullfile(tankPath, strcat(tankName, '_event.mat')), "eventData");
+save(fullfile(tankPath, strcat(tankName, '_event.mat')), "eventData", "eventDataRaw");
 
 %% Done
 fprintf("saveEventTime : Done\n");
