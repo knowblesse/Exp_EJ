@@ -4,9 +4,6 @@
 
 %% Set Variables
 BASEPATH = "H:/Data/Kim Data";
-addpath('../Lib/Neuralynx/');
-
-
 
 %% Get filepaths 
 filelist = dir(BASEPATH);
@@ -47,5 +44,5 @@ fprintf(strcat(repmat('=', 1, 80), '\n'));
 fprintf("BatchScript : All Complete! \n")
 
 %% Create Table
-outputTable = table(val_session, val_numVideo, val_numUnit, val_numBLAUnit, val_numPLUnit, 'VariableNames',["TankName", "NumVideo", "NumUnit", "NumBLAUnit", "NumPLUnit"]);
-writetable(outputTable, 'descriptive_data1.xlsx');
+outputTable = table((1:numel(val_session))', val_session, val_numVideo, val_numUnit, val_numBLAUnit, val_numPLUnit, 'VariableNames',["#", "TankName", "NumVideo", "NumUnit", "NumBLAUnit", "NumPLUnit"]);
+writetable(outputTable, 'descriptive_data.xlsx');

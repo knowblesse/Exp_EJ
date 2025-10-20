@@ -11,7 +11,6 @@ arguments
 end
 
 BASEPATH = "H:\Data\Kim Data";
-addpath('../lib/Neuralynx/');
 
 %% Get filepaths
 if tankPath == ''
@@ -88,7 +87,7 @@ end
 time2TS = cell(size(smiFilePaths,1),1);
 time2TS_filename = strings(size(smiFilePaths,1),1);
 
-for p = 1 : size(smiFilePaths)
+for p = 1 : numel(smiFilePaths)
     timeTimestampData_ = readlines(smiFilePaths{p});
     
     % Save name of the video file
