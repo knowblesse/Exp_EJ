@@ -96,7 +96,8 @@ clearvars bm temp_ i trial pelletType time_ms attempt bookmarkFilePath bookmarkF
 fprintf("saveEventTime: Bookmark info loaded\n");
 
 %% Data Integrity Check
-if ~all(unique(eventDataRaw.Trial) == (1:20)') % don't have all 20 trials
+if ~isequal(unique(eventDataRaw.Trial)', 1:20) % don't have all 20 trials
+    disp(unique(eventDataRaw.Trial)');
     error('Trial Missing');
 end
 
