@@ -20,6 +20,8 @@ numSession = numel(sessionPaths);
 val_session = strings(numSession, 1);
 val_numVideo = zeros(numSession, 1);
 val_numUnit = zeros(numSession, 1);
+val_numBLAUnit = zeros(numSession, 1);
+val_numPLUnit = zeros(numSession, 1);
 val_pre_p = zeros(numSession, 1);
 val_pre_np = zeros(numSession, 1);
 val_robot_p = zeros(numSession, 1);
@@ -36,6 +38,8 @@ for session = 1 : numel(sessionPaths)
     val_session(session) = tankName;
     val_numVideo(session) = expStat.numVideo;
     val_numUnit(session) = expStat.numUnit;
+    val_numBLAUnit(session) = expStat.numBLAUnit;
+    val_numPLUnit(session) = expStat.numPLUnit;
 
     clearvars p_;
 end
@@ -43,5 +47,5 @@ fprintf(strcat(repmat('=', 1, 80), '\n'));
 fprintf("BatchScript : All Complete! \n")
 
 %% Create Table
-outputTable = table(val_session, val_numVideo, val_numUnit, 'VariableNames',["TankName", "NumVideo", "NumUnit"]);
+outputTable = table(val_session, val_numVideo, val_numUnit, val_numBLAUnit, val_numPLUnit, 'VariableNames',["TankName", "NumVideo", "NumUnit", "NumBLAUnit", "NumPLUnit"]);
 writetable(outputTable, 'descriptive_data1.xlsx');
