@@ -1,7 +1,8 @@
 %% CreateHelperFiles
 % 2023 Ji Hoon Jeong
 % Function for creating helperfile
-% exp stat, video time vs timestamp
+% Helper file contains general session information
+% ex)exp stat, video time vs timestamp
 % This video time vs timestamp data can be used to sync the timestampof NX
 % device and the video. 2023DEC19
 function createHelperFiles(tankPath)
@@ -9,7 +10,7 @@ arguments
     tankPath string = ''
 end
 
-BASEPATH = "D:\Data\Kim Data";
+BASEPATH = "H:\Data\Kim Data";
 addpath('../lib/Neuralynx/');
 
 %% Get filepaths
