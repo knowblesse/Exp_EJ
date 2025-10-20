@@ -1,11 +1,9 @@
-%% Batch Scripts
-% 2023 Ji Hoon Jeong
-% Script for tank batch
+%% CreateCustomFiles
+% 2025 Ji Hoon Jeong
+% Script for creating helper and event.mat files
 
 %% Set Variables
 BASEPATH = "H:\Data\Kim Data";
-addpath('lib/Neuralynx/');
-addpath('01_preprocessing');
 
 %% Get filepaths 
 filelist = dir(BASEPATH);
@@ -19,19 +17,14 @@ vals = cell(0);
 for session = 1 : numel(sessionPaths)
     tankName = cell2mat(sessionPaths{session});
     tankPath = fullfile(BASEPATH, tankName);
-
-    helperFilePath = fullfile(tankPath, strcat(tankName(2:end), '_helper.mat'));
-    load(helperFilePath);
-
-    % Load event file
-    eventFilePath = fullfile(tankPath, strcat(tankName(2:end), '_event.mat'));
-    load(eventFilePath);
-
-    if numel(eventData) ~= 20
-        error("event Data size is not 20");
-    end
     
-    
+    % if session < 17
+    %     continue;
+    % end
+
+    createHelperFiles(tankPath);    
+    saveEventTimestamp(tankPath);
+
 end
 fprintf(strcat(repmat('=', 1, 80), '\n'));
 fprintf("BatchScript : All Complete! \n")
