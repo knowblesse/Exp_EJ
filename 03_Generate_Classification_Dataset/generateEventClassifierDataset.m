@@ -1,4 +1,4 @@
-function [X, y] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, timewindow, timewindow_bin, kernel_size, kernel_std)
+function [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, timewindow, timewindow_bin, kernel_size, kernel_std)
 %% generateEventClassifierDataset()
 % Generalized dataset generator. This function takes two event times,
 % eventTime1 and eventTime2, and parse neural data.
@@ -44,6 +44,7 @@ fprintf("generateEventClassifierDataset : Loading unit data\n");
 unitData = table([], [], {}, 'VariableName', {'unitNumber', 'numSpike', 'time_ms'});
 
 unitNumber = 1;
+region = string([]);
 for unitFilePath = unitFilePaths
     % Load Unit Data
     [Timestamps, ~, CellNumbers, ~, Samples] = Nlx2MatSpike(...
@@ -51,6 +52,10 @@ for unitFilePath = unitFilePaths
         [1, 1, 1, 1, 1],... % Time, Spike Channel Number, Cell Number, Spike Feature, Samples
         0,... %Extract Header
         1);
+
+    % Classify recording region
+    regResult = regexp(unitFilePath{1}, '(?<sessionName>@AP.*)\\(?<region>(BLA|PFC)).*TT(?<electrodeNumber>\d\d).\w\w\w', 'names');
+    region_ = regResult.region;
 
     % Separate Unit Data
     unitType = unique(CellNumbers);
@@ -71,6 +76,7 @@ for unitFilePath = unitFilePaths
             'VariableName', {'unitNumber', 'numSpike', 'time_ms'})];
         %fprintf("UnitDataCheck: Unit %d data loaded\n", unitNumber);
         unitNumber = unitNumber + 1;
+        region = [region; region_];
     end
 end
 numUnit = size(unitData, 1);
@@ -154,5 +160,8 @@ y = [1*ones(numel(event1_data), 1); 2*ones(numel(event2_data),1)];
 
 %% Generate X array
 X = cell2mat(X);
+
+%% Conver region
+region = region == "PFC";
 fprintf('generateEventClassifierDataset : Complete %s\n',tankName)
 end

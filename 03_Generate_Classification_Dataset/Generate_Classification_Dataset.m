@@ -4,7 +4,7 @@
 
 %% Set Variables
 BASEPATH = "H:\Data\Kim Data";
-n = 0;
+n = 4;
 
 %% Get filepaths 
 filelist = dir(BASEPATH);
@@ -36,21 +36,33 @@ for session = 1 : numel(sessionPaths)
             % PreRobotNP_RobotNP
             eventTime1 = double([eventData(1:10).NP]);
             eventTime2 = double([eventData(11:20).NP]);
+            [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
+                [-2000, +2000], 100, 1000, 100);
+            save(fullfile(tankPath,"PreRobotNP_RobotNP.mat"), "X", "y", "region");
         case 2
             % 2 : Event1 vs Event2: pre-robot NP vs. pre-robot P
             % PreRobotNP_PreRobotP
             eventTime1 = double([eventData(1:10).NP]);
             eventTime2 = double([eventData(1:10).P]);
+            [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
+                [-2000, +2000], 100, 1000, 100);
+            save(fullfile(tankPath,"PreRobotNP_PreRobotP.mat"), "X", "y", "region");
         case 3
             % 3 : Event1 vs Event2: pre-robot NP vs. pre-robot P
             % PreRobotNP_PreRobotP_far
             eventTime1 = double([eventData(1:10).NP]) - 5000;
             eventTime2 = double([eventData(1:10).P]) - 5000;
+            [X, y] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
+                [-2000, +2000], 100, 1000, 100);
+            save(fullfile(tankPath,"PreRobotNP_PreRobotP_far.mat"), "X", "y");
         case 4
             % 4 : Event1 vs Event2: pre-robot NP vs. Robot P
             % PreRobotNP_RobotNP_far
             eventTime1 = double([eventData(1:10).NP]) - 5000;
             eventTime2 = double([eventData(11:20).NP]) - 5000;
+            [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
+                [-2000, +2000], 100, 1000, 100);
+            save(fullfile(tankPath,"PreRobotNP_RobotNP_far.mat"), "X", "y", "region");
         case 5
             % 5 : Event1 vs Event2: pre-robot NP vs. Robot P
             % PreRobotNP_RobotNP_farfar
