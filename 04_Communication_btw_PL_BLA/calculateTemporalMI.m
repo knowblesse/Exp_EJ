@@ -33,10 +33,12 @@ if eventDataRaw.Trial(20) ~= 10 | eventDataRaw.Trial(21) ~= 11
     error("Check eventDataRaw file");
 end
 marker_ranges = {[-5000, +5000]};
+% Setup control marker
 markers = {double(round( ...
     (eventDataRaw.Time_ms(21) - eventDataRaw.Time_ms(20)) /2 + eventDataRaw.Time_ms(20)...
     ))}; % index 20 : last NP or P in Pre-robot phase
 
+%Setup marker around P during robot phase
 for i = 1 : 10
     marker_ranges = [marker_ranges, [-6000 + 2000*(i-1), -6000 + 2000*i]];
     markers = [markers, double(eventDataRaw.Time_ms(eventDataRaw.Trial >= 11 & eventDataRaw.PelletType == "P"))];
