@@ -1,6 +1,6 @@
-%% CellClustering
+%% LoadNSaveActivities
 % Load all recorded neurons, parce activity around key events, and
-% perform unsuperviced cell clustering to find out functional subset
+% save them into `AllActivity.mat`
 
 % Key Events:
 % Pre-robot NP
@@ -18,9 +18,13 @@ kernel_std = 100; % same as all
 windowsize = diff(timewindow);
 binnedDataSize = windowsize / timewindow_bin;
 
+% Warning: 580 units are hard coded
 ActivityData = zeros(580, binnedDataSize, 4);  % unit x 160 (for 8sec) x 4 events;
 TotalUnit = 0;
-Region = strings(580, 1);
+Region = strings(580, 1); % Either PFC or BLA
+SessionNames = strings(580, 1);
+UnitFile = strings(580, 1); % Name of each unit's file i.e. *.NTT
+UnitId = zeros(580, 1);  % Unit ID in the ntt file
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 1. Load all session, extract peri-event activity, average, and save
@@ -66,6 +70,12 @@ for session = 1 : numel(sessionPaths)
     unitData = table([], [], {}, 'VariableName', {'unitNumber', 'numSpike', 'time_ms'});
     unitNumber = 1;
     region = string([]);
+    unitFile = string([]);
+    unitId = []; 
+    % Note. For region, unitFile, and unitId, we can add them while going
+    % through unitFilePaths. But to use the same "TotalUnit" index, it
+    % keeps in a buffer above, and add them later with ActivityData. 
+    % I know.. It could be better. 
     for unitFilePath = unitFilePaths
         % Load Unit Data
         [Timestamps, ~, CellNumbers, ~, Samples] = Nlx2MatSpike(...
@@ -75,8 +85,9 @@ for session = 1 : numel(sessionPaths)
             1);
     
         % Classify recording region
-        regResult = regexp(unitFilePath{1}, '(?<sessionName>@AP.*)\\(?<region>(BLA|PFC)).*TT(?<electrodeNumber>\d\d).\w\w\w', 'names');
-        region_ = regResult.region;
+        regResult = regexp(unitFilePath{1}, '(?<sessionName>@AP.*)\\(?<unitFileName>(?<region>(BLA|PFC)).*TT(?<electrodeNumber>\d\d).\w\w\w)', 'names');
+        regResult2 = regexp(regResult.unitFileName, '(?<region>(BLA|PFC)).*TT(?<electrodeNumber>\d\d).\w\w\w', 'names');
+        region_ = regResult2.region;
     
         % Separate Unit Data
         unitType = unique(CellNumbers);
@@ -98,6 +109,8 @@ for session = 1 : numel(sessionPaths)
             %fprintf("UnitDataCheck: Unit %d data loaded\n", unitNumber);
             unitNumber = unitNumber + 1;
             region = [region; region_];
+            unitFile = [unitFile; regResult.unitFileName];
+            unitId = [unitId; unitType(i)];
         end
     end
     numUnit = size(unitData, 1);
@@ -144,14 +157,19 @@ for session = 1 : numel(sessionPaths)
                     % The index of the whole_serial_data is actual timepoint in ms.
                     % So retrive the value in the window by index.
                     eventData_(i_time, :) = mean(reshape(...
-                        (conv(serial_data(signal_window(1)+1:signal_window(2)),kernel,'same') - serial_data_mean) ./ serial_data_std,...
+                        whole_serial_data(signal_window(1)+1:signal_window(2)),...
                         timewindow_bin, binnedDataSize), 1);
                 end
             end
             eventData(eventType, :) = mean(eventData_, 1);  % average across all eventTimes
         end
+        
         ActivityData(TotalUnit + 1, :, :) = eventData';
         Region(TotalUnit + 1) = region(u);
+        SessionNames(TotalUnit + 1) = tankName;
+        UnitFile(TotalUnit + 1) = unitFile(u);
+        UnitId(TotalUnit + 1) = unitId(u); 
+
         TotalUnit = TotalUnit + 1;
         
         %clearvars *serial_data* signal_window i_time kernel*
@@ -159,4 +177,4 @@ for session = 1 : numel(sessionPaths)
 end
 
 %% Save
-save("AllActivity.mat", 'TotalUnit', 'Region', 'ActivityData');
+save("AllActivity.mat", 'TotalUnit', 'Region', 'ActivityData', 'SessionNames', 'UnitFile', 'UnitId');
