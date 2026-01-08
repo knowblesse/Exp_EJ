@@ -1,5 +1,5 @@
 %% CreateCustomFiles
-% 2025 Ji Hoon Jeong
+% 2026 Ji Hoon Jeong
 % Script for creating helper and event.mat files
 
 %% Set Variables
@@ -17,13 +17,12 @@ vals = cell(0);
 for session = 1 : numel(sessionPaths)
     tankName = cell2mat(sessionPaths{session});
     tankPath = fullfile(BASEPATH, tankName);
-    
-    % if session < 17
-    %     continue;
-    % end
 
+    
     createHelperFiles(tankPath);    
     saveEventTimestamp(tankPath);
+
+    fprintf("Session: %d\n", session);
 
 end
 fprintf(strcat(repmat('=', 1, 80), '\n'));

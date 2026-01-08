@@ -1,5 +1,5 @@
 %% saveEventTimestamp
-% 2023 Ji Hoon Jeong
+% 2026 Ji Hoon Jeong
 % Function for reading bookmark file,
 % check bookmark integrity,
 % and save it in a time from the exp. start in ms. 2023DEC20
@@ -17,7 +17,7 @@ if tankPath == ''
 end
 
 fprintf("saveEventTime : Processing tank %s\n", tankPath);
-tankName = regexp(tankPath, '\\(?:|#|##|$#|@)(AP.*)$', 'tokens');
+tankName = regexp(tankPath, '\\(?:|@)(AP.*)$', 'tokens');
 tankName = tankName{1}{1};
 
 bookmarkFilePaths = glob(tankPath, '\.pbf', true);
@@ -38,9 +38,10 @@ if ~iscell(bookmarkFilePaths)
 end
 
 % Event data table
-eventDataRaw = table([], [], [], [], 'VariableNames', {'Trial', 'PelletType', 'Attempts', 'Time_ms'});
+eventDataRaw = table([], [], [], [], [], 'VariableNames', {'Trial', 'Robot', 'PelletType', 'Attempts', 'Time_ms'});
 
 % for all bookmark files, 
+robotPhaseFlag = false;
 for b_idx = 1 : numel(bookmarkFilePaths)
     % Get bookmark data
     temp_ = readlines(bookmarkFilePaths{b_idx});
@@ -56,13 +57,18 @@ for b_idx = 1 : numel(bookmarkFilePaths)
     % for all bookmark lines
     for i = 1 : size(bookmarkData,1)
         bm = bookmarkData(i);
-        % Remove ROBOT separator
+
+        % Detect ROBOT separator, set the flag
         if contains(bm, 'ROBOT')
+            robotPhaseFlag = true;
             continue;
         end
     
         % Extract info using regexp
-        temp_ = regexp(bm, "\d+=(?<time>\d+)\*(?<trial>\d\d)_(?<type>(P|NP|E))(?<attempt>\d*)*", "names");
+        % e.g. 1=19300*04_NP*293039....
+        % e.g. 10=1928300*17_P1*293039....
+        % number(1~) = (time) * (Trial 2 digit) _ (type P or NP) (attemp none or digit) 
+        temp_ = regexp(bm, "\d+=(?<time>\d+)\*(?<trial>\d\d)_(?<type>(P|NP))(?<attempt>\d*)*", "names");
     
         % remove any corrupted line
         if numel(temp_) == 0
@@ -74,7 +80,7 @@ for b_idx = 1 : numel(bookmarkFilePaths)
         time = str2double(temp_.time);
 
         % During robot phase & P pellet, add attempt data
-        if trial > 10 && strcmp(pelletType, 'P')
+        if robotPhaseFlag && strcmp(pelletType, 'P')
             attempt = str2double(temp_.attempt);
         else
             attempt = 0;
@@ -87,7 +93,7 @@ for b_idx = 1 : numel(bookmarkFilePaths)
         end
         time_ms = (time2TS{time2TS_idx}(idx_, 2) - expStat.startTS) / 1000; % in ms
     
-        eventDataRaw = [eventDataRaw; table(trial, pelletType, attempt, time_ms, 'VariableNames', {'Trial', 'PelletType', 'Attempts', 'Time_ms'})];
+        eventDataRaw = [eventDataRaw; table(trial, robotPhaseFlag, pelletType, attempt, time_ms, 'VariableNames', {'Trial', 'Robot', 'PelletType', 'Attempts', 'Time_ms'})];
     end
 
 end
@@ -96,56 +102,49 @@ clearvars bm temp_ i trial pelletType time_ms attempt bookmarkFilePath bookmarkF
 fprintf("saveEventTime: Bookmark info loaded\n");
 
 %% Data Integrity Check
-if ~isequal(unique(eventDataRaw.Trial)', 1:20) % don't have all 20 trials
-    disp(unique(eventDataRaw.Trial)');
-    error('Trial Missing');
+robotPhaseStart = max(eventDataRaw.Trial(eventDataRaw.Robot == 0)) + 1;
+totalTrial = max(eventDataRaw.Trial);
+% Check Each Pre-robot phase has NP and P data
+temp1 = eventDataRaw.Trial(eventDataRaw.Robot == 0);
+temp2 = reshape(repmat(1:max(temp1), 2), 1, []);
+if temp1 ~= temp2
+    error('Odd number of Pre-robot phase data');
 end
 
-for t = 1 : 10
-    if sum(eventDataRaw.Trial == t) ~= 2 % don't have two pellet parts in all pre-robot trials
-        if (sum(eventDataRaw.Trial == t) == 1) && (eventDataRaw.PelletType(eventDataRaw.Trial == t) == 'E')
-            % if not, check if it is an error trial
-            continue;
-        else
-            error('Pre-robot %d trial does not have two pellet part', t);
-        end
-    end
-    if all(unique(eventDataRaw.PelletType(eventDataRaw.Trial == t)) ~= ["NP";"P"])
-        % check NP and P
-        error('Pre-robot %d trial has weird pellet type', t);
+temp1 = sum(eventDataRaw.PelletType(eventDataRaw.Robot == 0) == "P");
+temp2 = sum(eventDataRaw.PelletType(eventDataRaw.Robot == 0) == "NP");
+if temp1 ~= temp2
+    error('Imbalance NP and P in pre-robot phase');
+end
+
+% Check each robot phase has NP data
+for t = robotPhaseStart : max(eventDataRaw.Trial)
+    if ~any(eventDataRaw.PelletType(eventDataRaw.Trial == t) == "NP")
+        error('Trial %d do not have NP data', t);
     end
 end
-for t = 11 : 20
-    if all(unique(eventDataRaw.PelletType(eventDataRaw.Trial == t)) ~= ["NP";"P"])
-        % check NP and P
-        error('Robot %d trial has weird pellet type', t);
-    end
-end
+
 clearvars t
 fprintf("saveEventTime: Data integrity check passed\n");
 
 %% Create eventData
 eventData = struct();
-for trial = 1 : 10
+for trial = 1 : robotPhaseStart-1
     if eventDataRaw.PelletType(eventDataRaw.Trial == trial) == 'E'
-        eventData(trial).isE = true;
-        continue;
-    else
-        eventData(trial).isE = false;
+        error('Error trial');
     end
     eventData(trial).P = eventDataRaw.Time_ms(all([eventDataRaw.Trial == trial, eventDataRaw.PelletType == 'P'],2));
     eventData(trial).NP = eventDataRaw.Time_ms(all([eventDataRaw.Trial == trial, eventDataRaw.PelletType == "NP"],2));
+    eventData(trial).Robot = 0;
 end
 
-for trial = 11 : 20
+for trial = robotPhaseStart : totalTrial
     if eventDataRaw.PelletType(eventDataRaw.Trial == trial) == 'E'
-        eventData(trial).isE = true;
-        continue;
-    else
-        eventData(trial).isE = false;
+        error('Error trial');
     end
     eventData(trial).P = eventDataRaw.Time_ms(all([eventDataRaw.Trial == trial, eventDataRaw.PelletType == 'P', eventDataRaw.Attempts == 1],2));
     eventData(trial).NP = eventDataRaw.Time_ms(all([eventDataRaw.Trial == trial, eventDataRaw.PelletType == "NP"],2));
+    eventData(trial).Robot = 1;
 end
 
 %% Save

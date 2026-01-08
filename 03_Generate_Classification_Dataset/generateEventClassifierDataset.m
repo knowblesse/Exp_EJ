@@ -27,7 +27,7 @@ if tankPath == ''
 end
 
 fprintf("generateEventClassifierDataset : Processing tank %s\n", tankPath);
-tankName = regexp(tankPath, '\\(?:|#|##|$#|@)(AP.*)$', 'tokens');
+tankName = regexp(tankPath, '\\(?:@)(AP.*)$', 'tokens');
 tankName = tankName{1}{1};
 
 %% Get unit file Paths
