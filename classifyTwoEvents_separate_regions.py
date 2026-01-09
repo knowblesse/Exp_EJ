@@ -7,6 +7,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import LeaveOneOut, cross_val_score, permutation_test_score
 import csv
 
+single_unit_datapoint = 40 # number of features per single unit (4 sec * 100ms bins = 40)
+
 def run_classification(matlab_dataset_path):
     # Load matlab data
     data = loadmat(matlab_dataset_path)
@@ -40,21 +42,22 @@ def run_classification(matlab_dataset_path):
 
     # LOO accuracy
 
-    accs_bla = cross_val_score(clf_bla, X[:, :np.where(isPFC)[0][0] * 40], y, cv=cv_bla, scoring='accuracy', n_jobs=-1)
+    accs_bla = cross_val_score(clf_bla, X[:, :np.where(isPFC)[0][0] * single_unit_datapoint], y, cv=cv_bla, scoring='accuracy', n_jobs=-1)
     mean_acc_bla = float(np.mean(accs_bla))
 
     # Permutation test (how often chance beats your score)
+    # BLA always comes first
     score, perm_scores_bla, pval = permutation_test_score(
-        clf_bla, X[:, :np.where(isPFC)[0][0] * 40], y, cv=cv_bla, scoring='accuracy',
+        clf_bla, X[:, :np.where(isPFC)[0][0] * single_unit_datapoint], y, cv=cv_bla, scoring='accuracy',
         n_permutations=100, n_jobs=-1, random_state=0
     )
 
-    accs_pfc = cross_val_score(clf_pfc, X[:, np.where(isPFC)[0][0] * 40:], y, cv=cv_pfc, scoring='accuracy', n_jobs=-1)
+    accs_pfc = cross_val_score(clf_pfc, X[:, np.where(isPFC)[0][0] * single_unit_datapoint:], y, cv=cv_pfc, scoring='accuracy', n_jobs=-1)
     mean_acc_pfc = float(np.mean(accs_pfc))
 
     # Permutation test (how often chance beats your score)
     score, perm_scores_pfc, pval = permutation_test_score(
-        clf_pfc, X[:, np.where(isPFC)[0][0] * 40:], y, cv=cv_pfc, scoring='accuracy',
+        clf_pfc, X[:, np.where(isPFC)[0][0] * single_unit_datapoint:], y, cv=cv_pfc, scoring='accuracy',
         n_permutations=100, n_jobs=-1, random_state=0
     )
 

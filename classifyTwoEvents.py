@@ -44,6 +44,7 @@ def run_classification(matlab_dataset_path):
 if __name__ == "__main__":
     BASE_PATH = Path(r"H:\Data\Kim Data")
 
+    # Change this to switch dataset
     dataset_name = 'PreRobotP_RobotNP'
 
     session_paths = sorted(list(BASE_PATH.glob('@*')))
