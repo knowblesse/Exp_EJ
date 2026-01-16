@@ -19,12 +19,12 @@ windowsize = diff(timewindow);
 binnedDataSize = windowsize / timewindow_bin;
 
 % Warning: 580 units are hard coded
-ActivityData = zeros(580, binnedDataSize, 4);  % unit x 160 (for 8sec) x 4 events;
+ActivityData = zeros(875, binnedDataSize, 4);  % unit x 160 (for 8sec) x 4 events;
 TotalUnit = 0;
-Region = strings(580, 1); % Either PFC or BLA
-SessionNames = strings(580, 1);
-UnitFile = strings(580, 1); % Name of each unit's file i.e. *.NTT
-UnitId = zeros(580, 1);  % Unit ID in the ntt file
+Region = strings(875, 1); % Either PFC or BLA
+SessionNames = strings(875, 1);
+UnitFile = strings(875, 1); % Name of each unit's file i.e. *.NTT
+UnitId = zeros(875, 1);  % Unit ID in the ntt file
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 1. Load all session, extract peri-event activity, average, and save
@@ -61,10 +61,10 @@ for session = 1 : numel(sessionPaths)
     % Pre-robot P
     % Robot NP
     % Robot P
-    eventTime_PR_NP = double(eventDataRaw.Time_ms(eventDataRaw.Trial < 11 & eventDataRaw.PelletType == "NP"));
-    eventTime_PR_P = double(eventDataRaw.Time_ms(eventDataRaw.Trial < 11 & eventDataRaw.PelletType == "P"));
-    eventTime_R_NP = double(eventDataRaw.Time_ms(eventDataRaw.Trial >= 11 & eventDataRaw.PelletType == "NP"));
-    eventTime_R_P = double(eventDataRaw.Time_ms(eventDataRaw.Trial >= 11 & eventDataRaw.PelletType == "P"));
+    eventTime_PR_NP = double(eventDataRaw.Time_ms(eventDataRaw.Robot == 0 & eventDataRaw.PelletType == "NP"));
+    eventTime_PR_P = double(eventDataRaw.Time_ms(eventDataRaw.Robot == 0 & eventDataRaw.PelletType == "P"));
+    eventTime_R_NP = double(eventDataRaw.Time_ms(eventDataRaw.Robot == 1 & eventDataRaw.PelletType == "NP"));
+    eventTime_R_P = double(eventDataRaw.Time_ms(eventDataRaw.Robot == 1 & eventDataRaw.PelletType == "P"));
 
     %% Read unit file
     unitData = table([], [], {}, 'VariableName', {'unitNumber', 'numSpike', 'time_ms'});
