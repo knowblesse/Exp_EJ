@@ -6,10 +6,10 @@ kernel_size = 1000;
 kernel_std = 100;
 
 %% Load Session data
-%tankPath = 'H:\Data\Kim Data\@AP18_032618';
+%tankPath = 'H:\Data\Kim Data\@AP18_031218';
 
 %fprintf("generateEventClassifierDataset : Processing tank %s\n", tankPath);
-tankName = regexp(tankPath, '\\(?:|#|##|$#|@)(AP.*)$', 'tokens');
+tankName = regexp(tankPath, '\\(?:@)(AP.*)$', 'tokens');
 tankName = tankName{1}{1};
 
 %% Get unit file Paths
@@ -29,31 +29,30 @@ load(eventFilePath);
 % Group1 (General control): -10 ~ +10 data of mid-point of
 %    1. last P or NP during Pre-robot phase
 %    2. first P or NP during Robot phase
-% check sanity
-if eventDataRaw.Trial(20) ~= 10 | eventDataRaw.Trial(21) ~= 11
-    error("Check eventDataRaw file");
-end
+firstRobotIdx = find(eventDataRaw.Robot,1);
+lastPreRobotIdx = firstRobotIdx - 1;
+
 marker1_range = [-5000, +5000];
 marker1 = double(round( ...
-    (eventDataRaw.Time_ms(21) - eventDataRaw.Time_ms(20)) /2 + eventDataRaw.Time_ms(20)...
-    )); % index 20 : last NP or P in Pre-robot phase
+    (eventDataRaw.Time_ms(firstRobotIdx) - eventDataRaw.Time_ms(lastPreRobotIdx)) /2 + eventDataRaw.Time_ms(lastPreRobotIdx)...
+    )); 
 
 % Group2 (Pre-robot): -1 ~ +1 data during NP and P
 marker2_range = [-1000, +1000];
-marker2 = sort(double([eventData(1:10).NP, eventData(1:10).P]));
+marker2 = double(eventDataRaw.Time_ms(eventDataRaw.Robot == 0));
 
 % Group 3 (Robot before P): -5 ~ 0 data during P
 % Group 4 (Robot after P): 0 ~ +5 data during P
 marker3_range = [-5000, 0];
 marker4_range = [0, +5000];
-marker3 = double(eventDataRaw.Time_ms(eventDataRaw.Trial >= 11 & eventDataRaw.PelletType == "P"));
+marker3 = double(eventDataRaw.Time_ms(eventDataRaw.Robot == 1 & eventDataRaw.PelletType == "P"));
 marker4 = marker3;
 fprintf("Num P during Robot phase: %d", numel(marker3));
 
 % Group 5 (Robot before NP right after P): -5 ~ 0 data during NP
 marker5_range = [-5000, 0];
 marker5 = [];
-for i = 22:size(eventDataRaw,1) % Robot phase starts from 21. So start from 22
+for i = find(eventDataRaw.Robot,1)+1 : size(eventDataRaw,1)
     if eventDataRaw.PelletType(i) == "NP" & eventDataRaw.PelletType(i-1) == "P"
         marker5 = [marker5, double(eventDataRaw.Time_ms(i))];
     end
