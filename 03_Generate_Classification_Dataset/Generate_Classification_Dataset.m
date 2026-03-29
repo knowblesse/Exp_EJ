@@ -4,7 +4,7 @@
 
 %% Set Variables
 BASEPATH = "H:\Data\Kim Data";
-n = 8;
+n = 4;
 
 %% Get filepaths 
 filelist = dir(BASEPATH);
@@ -110,12 +110,20 @@ for session = 1 : numel(sessionPaths)
             % save(fullfile(tankPath,"PreRobotNP_PreRobotP_RobotFirstNP_RobotFirstP.mat"), "X", "y");
         case 8
             % 8 : Event1 vs Event2: pre-robot P vs. robot NP
-            % PreRobotNP_RobotNP
+            % PreRobotP_RobotNP
             eventTime1 = double([eventData([eventData.Robot] == 0).P]);
             eventTime2 = double([eventData([eventData.Robot] == 1).NP]);
             [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
                 [-2000, +2000], 100, 1000, 100);
             save(fullfile(tankPath,"PreRobotP_RobotNP.mat"), "X", "y", "region");
+        case 9
+            % 9 : Event1 vs Event2: pre-robot P vs. robot NP
+            % PreRobotP_RobotNP_far
+            eventTime1 = double([eventData([eventData.Robot] == 0).P]) - 5000;
+            eventTime2 = double([eventData([eventData.Robot] == 1).NP]) - 5000;
+            [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
+                [-2000, +2000], 100, 1000, 100);
+            save(fullfile(tankPath,"PreRobotP_RobotNP_far.mat"), "X", "y", "region");
     end
 
 end
