@@ -59,7 +59,7 @@ for i = find(eventDataRaw.Robot,1)+1 : size(eventDataRaw,1)
 end
 fprintf(" | Num NP after P: %d\n", numel(marker5));
 
-num_marker = 5;
+num_marker_type = 5;
 marker_ranges = {marker1_range, marker2_range, marker3_range, marker4_range, marker5_range};
 markers = {marker1, marker2, marker3, marker4, marker5};
 
@@ -110,9 +110,9 @@ kernel = gausswin(ceil(kernel_size/2)*2-1, (kernel_size - 1) / (2 * kernel_std))
 %% Parse neural data
 % ex) -10 ~ +10 sec & 100ms bin
 % => each unit's activity during 100ms is summarized as one value.
-marker_datasize = zeros(num_marker,1);
-marker_data = cell(num_marker, 1);
-for i = 1 : num_marker
+marker_datasize = zeros(num_marker_type,1);
+marker_data = cell(num_marker_type, 1);
+for i = 1 : num_marker_type
     marker_datasize(i) = diff(marker_ranges{i}) / timewindow_bin;
     marker_data{i} = zeros(numUnit, marker_datasize(i) * numel(markers{i}));
 end
@@ -135,20 +135,22 @@ for u = 1 : numUnit
     clearvars serial_data_kerneled
 
     %% Select data around marker time
-    for i_marker = 1 : num_marker
-        for i_time = 1 : numel(markers{i_marker})
-            signal_window = round(marker_ranges{i_marker} + markers{i_marker}(i_time));
+    for i_marker_type = 1 : num_marker_type
+        for i_time = 1 : numel(markers{i_marker_type})
+            signal_window = round(marker_ranges{i_marker_type} + markers{i_marker_type}(i_time));
+
             % Check if the window is out of range
-            if ~( (signal_window(1) >= 1) && (signal_window(2) <= numel(whole_serial_data)) )
+            if signal_window(1) < 1 || signal_window(2) > numel(serial_data)
                 error('Window out of range');
             end
+
             % The index of the whole_serial_data is actual timepoint in ms.
             % So retrive the value in the window by index.
-            marker_data{i_marker}(u, ...
-                marker_datasize(i_marker) * (i_time-1) + 1 : ...
-                marker_datasize(i_marker) * (i_time) ) = mean(reshape(...
-                    (conv(serial_data(signal_window(1)+1:signal_window(2)),kernel,'same') - serial_data_mean) ./ serial_data_std,...
-                    timewindow_bin, []), 1);
+            snippet = whole_serial_data(signal_window(1)+1:signal_window(2));
+            snippet_binned = mean(reshape(snippet, timewindow_bin, []), 1);
+
+            marker_data{i_marker_type}(u, marker_datasize(i_marker_type) * (i_time-1) + 1 : marker_datasize(i_marker_type) * (i_time) ) = ...
+                snippet_binned;
         end
     end
 end
@@ -158,8 +160,8 @@ clearvars *serial_data* signal_window i_time kernel*
 % now we have marker_data
 
 %% Split BLA and PFC
-marker_data_split = cell(num_marker, 2);
-for i = 1 : num_marker
+marker_data_split = cell(num_marker_type, 2);
+for i = 1 : num_marker_type
     marker_data_split{i, 1} = marker_data{i}(region == "BLA", :); % num neuron x num bin 
     marker_data_split{i, 2} = marker_data{i}(region == "PFC", :);
 end
@@ -176,19 +178,16 @@ BLA_labels_all = kmeans(BLA_all', K, 'Replicates', 10, 'MaxIter', 1000); % row s
 PFC_labels_all = kmeans(PFC_all', K, 'Replicates', 10, 'MaxIter', 1000);
 
 %% Split BLA and PFC data
-marker_label = cell(num_marker, 2);
+marker_label = cell(num_marker_type, 2);
 Ti = cellfun(@(X) size(X,2), marker_data_split(:,1));
 cs = [0; cumsum(Ti)];
-for i = 1:num_marker
+for i = 1:num_marker_type
     idx = (cs(i)+1):cs(i+1);
     marker_label{i,1} = BLA_labels_all(idx);
     marker_label{i,2} = PFC_labels_all(idx);
 end
 
 clearvars *_data_BLA *_data_PFC *labels_
-
-%% Match each mar
-
 
 %% Compute zMI
 [~, Hx, Hy] = mutual_information(BLA_labels_all, PFC_labels_all, K);
@@ -197,16 +196,13 @@ if Hx == 0 | Hy == 0
     error("Weird entropy");
 end
 
-output = zeros(1, num_marker);
-bla = zeros(1, num_marker);
-pfc = zeros(1, num_marker);
-for i = 1 : num_marker
+output = zeros(1, num_marker_type);
+bla = zeros(1, num_marker_type);
+pfc = zeros(1, num_marker_type);
+for i = 1 : num_marker_type
     [m_, hx, hy] = mutual_information(marker_label{i, 1}, marker_label{i, 2}, K);
     output(i) = m_ / sqrt(Hx * Hy);
     bla(i) = hx;
     pfc(i) = hy;
 end
-
-
-
 end
