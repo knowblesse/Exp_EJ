@@ -116,27 +116,32 @@ for u = 1 : numUnit
     event1_data = cell(numel(eventTime1), 1);
     for i_time = 1 : numel(eventTime1)
         signal_window = round(timewindow + eventTime1(i_time));
+        
         % Check if the window is out of range
-        if (signal_window(1) >= 1) && (signal_window(2) <= numel(whole_serial_data))
-            % The index of the whole_serial_data is actual timepoint in ms.
-            % So retrive the value in the window by index.
-            event1_data{i_time} = mean(reshape(...
-                (conv(serial_data(signal_window(1)+1:signal_window(2)),kernel,'same') - serial_data_mean) ./ serial_data_std,...
-                timewindow_bin, binnedDataSize), 1);
+        if signal_window(1) < 1 || signal_window(2) > numel(serial_data)
+            error('Window out of range');
         end
+        % The index of the whole_serial_data is actual timepoint in ms.
+        % So retrive the value in the window by index.
+        snippet = whole_serial_data(signal_window(1)+1:signal_window(2));
+        snippet_binned = mean(reshape(snippet, timewindow_bin, []), 1);
+               
+        event1_data{i_time} = snippet_binned;
     end
 
     event2_data = cell(numel(eventTime2), 1);
     for i_time = 1 : numel(eventTime2)
         signal_window = round(timewindow + eventTime2(i_time));
         % Check if the window is out of range
-        if (signal_window(1) >= 1) && (signal_window(2) <= numel(whole_serial_data))
-            % The index of the whole_serial_data is actual timepoint in ms.
-            % So retrive the value in the window by index.
-            event2_data{i_time} = mean(reshape(...
-                (conv(serial_data(signal_window(1)+1:signal_window(2)),kernel,'same') - serial_data_mean) ./ serial_data_std,...
-                timewindow_bin, binnedDataSize), 1);
+        if signal_window(1) < 1 || signal_window(2) > numel(serial_data)
+            error('Window out of range');
         end
+        % The index of the whole_serial_data is actual timepoint in ms.
+        % So retrive the value in the window by index.
+        snippet = whole_serial_data(signal_window(1)+1:signal_window(2));
+        snippet_binned = mean(reshape(snippet, timewindow_bin, []), 1);
+               
+        event2_data{i_time} = snippet_binned;
     end
     
     %% Remove Empty Data resulted by index out of the range
