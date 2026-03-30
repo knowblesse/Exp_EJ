@@ -22,7 +22,7 @@ for session = 1:numel(sessionPaths)
     helperFilePath = fullfile(tankPath, strcat(tankName(2:end), '_helper.mat'));
     load(helperFilePath);
 
-    if expStat.numBLAUnit < 4 || expStat.numPLUnit < 4
+    if expStat.numBLAUnit < 3 || expStat.numPLUnit < 3
         fprintf("%s Small unit number. Skipping...\n", tankName);
         continue;
     end
