@@ -16,8 +16,15 @@ def run_classification(matlab_dataset_path):
     y = np.ravel(data.get('y')).astype(int)
     isPFC = np.ravel(data.get('region')).astype(int)
 
-    if np.sum(isPFC == 0) == 0 or np.sum(isPFC == 1) == 0:
+    # Check minimum number of neurons (3)
+    if np.sum(isPFC == 0) < 3 or np.sum(isPFC == 1) < 3:
         return np.nan, np.nan, np.nan, np.nan, np.sum(isPFC == 0), np.sum(isPFC == 1)
+
+    # Check minimum number of events
+    for lb in np.unique(y):
+        if np.sum(y == lb) < 3:
+            print(f"Not enough samples for label {lb} in {matlab_dataset_path.name} {np.sum(lb == y)}. Skipping session.")
+            return np.nan, np.nan, np.nan, np.nan, np.sum(isPFC == 0), np.sum(isPFC == 1)
 
     # Clip
     X = np.clip(X, -5, 5)
@@ -66,24 +73,27 @@ def run_classification(matlab_dataset_path):
 if __name__ == "__main__":
     BASE_PATH = Path(r"H:\Data\Kim Data")
 
-    dataset_name = 'PreRobotNP_RobotNP_far'
+    dataset_name = 'RobotNP_RobotP_pred'
 
     session_paths = sorted(list(BASE_PATH.glob('@*')))
 
     rows = []
     for i, session_path in enumerate(session_paths, 1):
+
         mat_path = next(session_path.glob(dataset_name + '.mat'), None)
         if mat_path is None:
             print(f"No dataset found in {session_path}")
             continue
         acc_bla, acc_bla_random, acc_pfc, acc_pfc_random, numBLA, numPFC = run_classification(mat_path)
-        rows.append([session_path.name, f"{acc_bla:.4f}", f"{acc_bla_random:.4f}", f"{acc_pfc:.4f}", f"{acc_pfc_random:.4f}", f"{numBLA:d}", f"{numPFC:d}"])
+        if np.isnan(acc_bla):
+            continue
+        rows.append([session_path.name, f"{acc_bla_random:.4f}", f"{acc_bla:.4f}", f"{acc_pfc_random:.4f}", f"{acc_pfc:.4f}", f"{numBLA:d}", f"{numPFC:d}"])
         print(f"Session {i}/{len(session_paths)}: {session_path.name}")
 
     out_path = BASE_PATH / (dataset_name + '_split_results.csv')
     with open(out_path, 'w', newline='') as f:
         w = csv.writer(f)
-        w.writerow(['Session', 'Accuracy(BLA)', 'Accuracy(BLA random)', 'Accuracy(PFC)', 'Accuracy(PFC random)', 'NumBLA', 'NumPFC'])
+        w.writerow(['Session', 'Accuracy(BLA random)', 'Accuracy(BLA)', 'Accuracy(PFC random)', 'Accuracy(PFC)', 'NumBLA', 'NumPFC'])
         w.writerows(rows)
     print(f"Results saved to {out_path}")
 
