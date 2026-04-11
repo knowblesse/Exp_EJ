@@ -18,7 +18,7 @@ kernel_std = 100; % same as all
 windowsize = diff(timewindow);
 binnedDataSize = windowsize / timewindow_bin;
 
-% Warning: 580 units are hard coded
+% Warning: 875 units are hard coded
 ActivityData = zeros(875, binnedDataSize, 4);  % unit x 160 (for 8sec) x 4 events;
 TotalUnit = 0;
 Region = strings(875, 1); % Either PFC or BLA
