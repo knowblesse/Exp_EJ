@@ -4,7 +4,7 @@
 
 %% Set Variables
 BASEPATH = "H:\Data\Kim Data";
-n = 4;
+n = 15;
 
 %% Get filepaths 
 filelist = dir(BASEPATH);
@@ -48,9 +48,9 @@ for session = 1 : numel(sessionPaths)
             % PreRobotNP_PreRobotP_far
             eventTime1 = double([eventData([eventData.Robot] == 0).NP]) - 5000;
             eventTime2 = double([eventData([eventData.Robot] == 0).P]) - 5000;
-            [X, y] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
+            [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
                 [-2000, +2000], 100, 1000, 100);
-            save(fullfile(tankPath,"PreRobotNP_PreRobotP_far.mat"), "X", "y");
+            save(fullfile(tankPath,"PreRobotNP_PreRobotP_far.mat"), "X", "y", "region");
         case 4
             % 4 : Event1 vs Event2: pre-robot NP vs. Robot P
             % PreRobotNP_RobotNP_far
@@ -65,31 +65,18 @@ for session = 1 : numel(sessionPaths)
             eventTime1 = double([eventData([eventData.Robot] == 0).NP]) - 10000;
             eventTime2 = double([eventData([eventData.Robot] == 1).NP]) - 10000;
 
-            [X, y] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
+            [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
                 [-2000, +2000], 100, 1000, 100);
 
-            save(fullfile(tankPath,"PreRobotNP_RobotNP_farfar.mat"), "X", "y");
+            save(fullfile(tankPath,"PreRobotNP_RobotNP_farfar.mat"), "X", "y", "region");
         case 6
-            % 6 : PreRobot NP & P, Robot first NP, first P
-            % TODO Check code (1:10) is not pre-robot anymore
-            % eventTime1 = double([eventData(1:10).NP]);
-            % eventTime2 = double([eventData(1:10).P]);
-            % [X1, y1] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
-            %     [-2000, +2000], 100, 1000, 100);
-            % 
-            % eventTime1 = double(eventDataRaw.Time_ms(...
-            %     find( ([eventDataRaw.Trial] >= 11) & ([eventDataRaw.PelletType] == "NP"), 1)...
-            %     ));
-            % eventTime2 = double(eventDataRaw.Time_ms(...
-            %     find( ([eventDataRaw.Trial] >= 11) & ([eventDataRaw.PelletType] == "P"), 1)...
-            %     ));
-            % [X2, y2] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
-            %     [-2000, +2000], 100, 1000, 100);
-            % y2 = y2 + 2;
-            % 
-            % X = [X1; X2];
-            % y = [y1; y2];
-            % save(fullfile(tankPath,"PreRobotNP_PreRobotP_RobotFirstNP_RobotFirstP.mat"), "X", "y");
+            % 6 : Event1 vs Event2: pre-robot NP vs. pre-robot P far far
+            % PreRobotNP_PreRobotP_farfar
+            eventTime1 = double([eventData([eventData.Robot] == 0).NP]) - 10000;
+            eventTime2 = double([eventData([eventData.Robot] == 0).P]) - 10000;
+            [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
+                [-2000, +2000], 100, 1000, 100);
+            save(fullfile(tankPath,"PreRobotNP_PreRobotP_farfar.mat"), "X", "y", "region");
         case 7
             % 7 : Event1 vs Event2: pre-robot NP vs. Robot P
             % eventTime1 = double([eventData(1:10).NP]);
@@ -124,6 +111,54 @@ for session = 1 : numel(sessionPaths)
             [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
                 [-2000, +2000], 100, 1000, 100);
             save(fullfile(tankPath,"PreRobotP_RobotNP_far.mat"), "X", "y", "region");
+        case 10
+            % 10 : Event1 vs Event2: robot NP vs. robot P
+            % RobotNP_RobotP_pred
+            eventTime1 = double([eventData([eventData.Robot] == 1).NP]);
+            eventTime2 = double([eventData([eventData.Robot] == 1).P]);
+            [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
+                [-10000, 0], 100, 1000, 100);
+            save(fullfile(tankPath,"RobotNP_RobotP_pred.mat"), "X", "y", "region");
+        case 11
+            % 11 : Event1 vs Event2: robot NP vs. robot P
+            % RobotNP_RobotP_pred2
+            eventTime1 = double([eventData([eventData.Robot] == 1).NP]);
+            eventTime2 = double([eventData([eventData.Robot] == 1).P]);
+            [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
+                [-6000, -2000], 100, 1000, 100);
+            save(fullfile(tankPath,"RobotNP_RobotP_pred2.mat"), "X", "y", "region");
+        case 12
+            % 12 : Event1 vs Event2: pre-robot NP vs. pre-robot P
+            % PreRobotNP_PreRobotP_10sec
+            eventTime1 = double([eventData([eventData.Robot] == 0).NP]);
+            eventTime2 = double([eventData([eventData.Robot] == 0).P]);
+            [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
+                [-10000, 0000], 100, 1000, 100);
+            save(fullfile(tankPath,"PreRobotNP_PreRobotP_10sec.mat"), "X", "y", "region");
+        case 13
+            % 13 : Event1 vs Event2: pre-robot NP vs. robot NP
+            % PreRobotNP_RobotNP_10sec
+            eventTime1 = double([eventData([eventData.Robot] == 0).NP]);
+            eventTime2 = double([eventData([eventData.Robot] == 1).NP]);
+            [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
+                [-10000, 0000], 100, 1000, 100);
+            save(fullfile(tankPath,"PreRobotNP_RobotNP_10sec.mat"), "X", "y", "region");
+        case 14
+            % 14 : Event1 vs Event2: pre-robot NP vs. pre-robot P
+            % PreRobotNP_PreRobotP_pred15
+            eventTime1 = double([eventData([eventData.Robot] == 0).NP]);
+            eventTime2 = double([eventData([eventData.Robot] == 0).P]);
+            [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
+                [-5000, -1000], 100, 1000, 100);
+            save(fullfile(tankPath,"PreRobotNP_PreRobotP_pred15.mat"), "X", "y", "region");
+        case 15
+            % 15 : Event1 vs Event2: pre-robot P vs. robot NP
+            % PreRobotP_RobotNP_10sec
+            eventTime1 = double([eventData([eventData.Robot] == 0).P]);
+            eventTime2 = double([eventData([eventData.Robot] == 1).NP]);
+            [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
+                [-10000, 0000], 100, 1000, 100);
+            save(fullfile(tankPath,"PreRobotP_RobotNP_10sec.mat"), "X", "y", "region");
     end
 
 end
