@@ -19,16 +19,20 @@ windowsize = diff(timewindow);
 binnedDataSize = windowsize / timewindow_bin;
 
 % Warning: 875 units are hard coded
-ActivityData = zeros(875, binnedDataSize, 4);  % unit x 160 (for 8sec) x 4 events;
+NUM_NEURON = 875;
+ActivityData = zeros(NUM_NEURON, binnedDataSize, 4);  % unit x 160 (for 8sec) x 4 events;
 TotalUnit = 0;
-Region = strings(875, 1); % Either PFC or BLA
-SessionNames = strings(875, 1);
-UnitFile = strings(875, 1); % Name of each unit's file i.e. *.NTT
-UnitId = zeros(875, 1);  % Unit ID in the ntt file
+Region = strings(NUM_NEURON, 1); % Either PFC or BLA
+SessionNames = strings(NUM_NEURON, 1);
+UnitFile = strings(NUM_NEURON, 1); % Name of each unit's file i.e. *.NTT
+UnitId = zeros(NUM_NEURON, 1);  % Unit ID in the ntt file
+NumSpikes = zeros(NUM_NEURON, 1);
+SessionLength = zeros(NUM_NEURON, 1);
+FR = zeros(NUM_NEURON, 1);
+NumSpikesEvents = zeros(NUM_NEURON, 4); % For 4 events
+NumEvents = zeros(NUM_NEURON, 4); % For 4 events
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 1. Load all session, extract peri-event activity, average, and save
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Load all session, extract peri-event activity, average, and save
 
 %% Get Session lists
 filelist = dir(BASEPATH);
@@ -121,6 +125,7 @@ for session = 1 : numel(sessionPaths)
 
     %% Load Unit and apply Generate Serial Data from spike timestamps(fs:1000)
     for u = 1 : numUnit
+        TotalUnit = TotalUnit + 1;
         % use max(10s from the last spike, 10s from the last NP) as the length of the serial data
         serial_data = zeros(max(...
             round(unitData.time_ms{u}(end)), ...
@@ -133,6 +138,13 @@ for session = 1 : numel(sessionPaths)
         
         % set 1 for every spike timepoint. But only take positive values
         serial_data(round(unitData.time_ms{u})) = 1;
+        
+        % count number of spikes
+        NumSpikes(TotalUnit) = numel(unitData.time_ms{u});
+
+        % Session Length 
+        SessionLength(TotalUnit) = numel(serial_data) - 10000;
+        FR(TotalUnit) = NumSpikes(TotalUnit) / SessionLength(TotalUnit) * 1000;
     
         %% Convolve Gaussian kernel 
         serial_data_kerneled =  conv(serial_data,kernel,'same');
@@ -150,6 +162,7 @@ for session = 1 : numel(sessionPaths)
         eventData = zeros(4, binnedDataSize); 
         for eventType = 1 : 4
             eventData_ = zeros(numel(eventTimes{eventType}), binnedDataSize);
+            spikeCount = 0;
             for i_time = 1 : numel(eventTimes{eventType})
                 signal_window = round(timewindow + eventTimes{eventType}(i_time));
                 % Check if the window is out of range
@@ -159,22 +172,23 @@ for session = 1 : numel(sessionPaths)
                     eventData_(i_time, :) = mean(reshape(...
                         whole_serial_data(signal_window(1)+1:signal_window(2)),...
                         timewindow_bin, binnedDataSize), 1);
+                    %count spikes within this events
+                    spikeCount = spikeCount + sum(serial_data(signal_window(1)+1:signal_window(2)));
                 end
             end
             eventData(eventType, :) = mean(eventData_, 1);  % average across all eventTimes
+            NumSpikesEvents(TotalUnit, eventType) = spikeCount;
+            NumEvents(TotalUnit, eventType) = numel(eventTimes{eventType});
         end
         
-        ActivityData(TotalUnit + 1, :, :) = eventData';
-        Region(TotalUnit + 1) = region(u);
-        SessionNames(TotalUnit + 1) = tankName;
-        UnitFile(TotalUnit + 1) = unitFile(u);
-        UnitId(TotalUnit + 1) = unitId(u); 
-
-        TotalUnit = TotalUnit + 1;
-        
+        ActivityData(TotalUnit, :, :) = eventData';
+        Region(TotalUnit) = region(u);
+        SessionNames(TotalUnit) = tankName;
+        UnitFile(TotalUnit) = unitFile(u);
+        UnitId(TotalUnit) = unitId(u); 
         %clearvars *serial_data* signal_window i_time kernel*
     end
 end
 
 %% Save
-save("AllActivity.mat", 'TotalUnit', 'Region', 'ActivityData', 'SessionNames', 'UnitFile', 'UnitId');
+save("AllActivity_44.mat", 'TotalUnit', 'Region', 'ActivityData', 'SessionNames', 'UnitFile', 'UnitId', 'NumSpikes', 'SessionLength', 'FR', 'NumSpikesEvents', 'NumEvents');

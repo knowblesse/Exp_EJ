@@ -3,8 +3,10 @@
 %% Parameters
 showGraph = true;
 eventTypeList = [4];
+distanceCutoff = 0.70;
+numberCutoff = 20;
 %% Load Aligned Data
-load('AllActivity.mat');
+load('AllActivity_1010.mat');
 
 %% Loop through 4 event types
 % Pre-robot NP
@@ -12,47 +14,62 @@ load('AllActivity.mat');
 % Robot NP
 % Robot P
 eventName = ["Pre-robot NP", "Pre-robot P", "Robot NP", "Robot P"];
-colors = lines(10);
+colors = lines(20);
 
-for region = {"BLA"}
+% Check validity of neurons using number of spikes per event
+isValid = NumSpikesEvents(:,4)./NumEvents(:,4) >= 1;
+
+output_sessionNames = [];
+output_unitFile = [];
+output_unitId = [];
+output_region = [];
+output_group = [];
+
+for region = {"BLA", "PFC"}
     region = region{1};
     if region == "BLA"
-        groups = zeros(375, 4); % BLA
-        numCluster = 8;
-        cutoffLimit = 30;
+        numNeurons = sum(Region == "BLA" & isValid);
+        groups = zeros(numNeurons, 4); % BLA
     else
-        groups = zeros(500, 4);% PFC
-        numCluster = 8;
-        cutoffLimit = 50;
+        numNeurons = sum(Region == "PFC" & isValid);
+        groups = zeros(numNeurons, 4);% PFC
     end
 
     for eventType = eventTypeList
         % -4 to +4 => 160 points
-        zscoreMatrix = ActivityData(Region == region, :, eventType);
+        zscoreMatrix = ActivityData(Region == region & isValid, :, eventType);
         %zscoreMatrix = ActivityData(Region == region, 40:119, eventType);
-        sessionNames = SessionNames(Region == region, :);
-        unitFile = UnitFile(Region == region, :);
-        unitId = UnitId(Region == region, :);
+        sessionNames = SessionNames(Region == region & isValid, :);
+        unitFile = UnitFile(Region == region & isValid, :);
+        unitId = UnitId(Region == region & isValid, :);
+        regionName = Region(Region == region & isValid, :);
 
-        %% Use 'correlation' as distance between unit's activity
-        Z_ = linkage(zscoreMatrix, 'average', 'correlation');
+        %% Use 'cosine' as distance between unit's activity
+        Z_ = linkage(zscoreMatrix, 'average', 'cosine');
         
-        unitClusterId = cluster(Z_, 'maxclust', numCluster);
+        %unitClusterId = cluster(Z_, 'maxclust', numCluster);
+        unitClusterId = cluster(Z_, 'cutoff', distanceCutoff, 'criterion', 'distance');
         
-        cnt = histcounts(unitClusterId, 1:numCluster+1);
+        cnt = histcounts(unitClusterId, 0.5:1:(max(unitClusterId)+0.5));
         [val, idx] = sort(cnt, 'descend');
         
         numGroup = 0;
         groupingResult = zeros(size(zscoreMatrix,1),1);
         
-        for clt = 1 : numCluster
-            if val(clt) >= cutoffLimit
+        for clt = 1 : max(unitClusterId)
+            if val(clt) >= numberCutoff
                 numGroup = numGroup + 1;
                 groupingResult(unitClusterId == idx(clt)) = numGroup;
             end
         end
         
         groups(:, eventType) = groupingResult;
+
+        output_sessionNames = [output_sessionNames; sessionNames];
+        output_unitFile = [output_unitFile; unitFile];
+        output_unitId = [output_unitId; unitId];
+        output_region = [output_region; regionName];
+        output_group = [output_group; groupingResult];
 
         %% Draw Average activity of each group
         if showGraph
@@ -71,23 +88,30 @@ for region = {"BLA"}
                 plot_lines = [plot_lines, obj_line];
                 legends = [legends, strcat("Group " , num2str(group), " (", num2str(sum(groupingResult == group)), ")")];
             end
-            xlim([0, 160]);
-            ylim([-0.5, 1.5]);
+            xlim([0, size(zscoreMatrix, 2)]);
+            ylim([-0.5, 3]);
             line(xlim, [0,0], 'LineStyle', ':', 'Color', [0.3, 0.3, 0.3]);
             ylabel('Z score');
             xlabel('Time (sec)');
-            xticks(0:20:160);
-            xticklabels(-4:4);
+            xticks(0:20:size(zscoreMatrix, 2));
+            xticklabels(-size(zscoreMatrix, 2)/40:size(zscoreMatrix, 2)/40);
             legend(plot_lines, legends, 'FontSize', 10);
             set(gca, 'FontName', 'Noto Sans');
             pos = get(gcf, 'Position');
-            set(gcf, 'Position', [pos(1), pos(2), 400, 400]);
-            title(eventName(eventType));
+            %set(gcf, 'Position', [pos(1), pos(2), 400, 400]);
+            if region == "BLA"
+                set(gcf, 'Position', [2504, 497, 400, 400]);
+            else
+                set(gcf, 'Position', [2904, 497, 400, 400]);
+            end
+
+            title(eventName(eventType) + " dist: " + num2str(distanceCutoff) + " num: " + num2str(numberCutoff));
             %saveas(fig, eventName(eventType) + ".png");
+            drawnow;
         end
 
         %% Draw sorted heatmap
-        if showGraph
+        if false
             finalIdx = [];
             
             for g = 1:numGroup
@@ -131,21 +155,17 @@ for region = {"BLA"}
             ylabel('Neurons (sorted)');
             title(eventName(eventType));
             pos = get(gcf, 'Position');
-            set(gcf, 'Position', [pos(1), pos(2), 321, 760]);
+            set(gcf, 'Position', [pos(1)+400, pos(2)-360, 321, 760]);
             %saveas(fig, eventName(eventType) + "sorted.png");
         end
     end
 end
-% fig = figure(15);
-% clf;
-% [~, ax1, ~] = shadeplot(ActivityData(groups(:, 4) == 3 & Region == "BLA", :, 4), 'SD', 'sem', 'LineWidth', 2);
-% hold on;
-% [~, ax2, ~] = shadeplot(ActivityData(groups(:, 4) == 3 & Region == "PFC", :, 4), 'SD', 'sem', 'LineWidth', 2);
-% 
-% legend([ax1, ax2], ["BLA", "PFC"])
-% title("Robot P Group 3's activity");
-% xticks(0:20:160);
-% xticklabels(-4:4);
-% xlabel('Time (s)');
-% ylabel('Activity (Z)');
-% ylim([-0.5, 4]);
+%% Save
+outputTable = table(output_sessionNames, output_unitFile, output_unitId, output_region, output_group, ...
+    'VariableNames', {'SessionName', 'UnitFileName', 'UnitID', 'Region', 'Group by Robot P'});
+filename = 'neuron_clustering_results.xlsx';
+
+% Write each table to a separate sheet
+writetable(outputTable, filename);
+
+fprintf('Tables saved to %s\n', filename);
