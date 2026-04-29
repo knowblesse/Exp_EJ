@@ -4,7 +4,7 @@
 
 %% Set Variables
 BASEPATH = "H:\Data\Kim Data";
-n = 15;
+n = 11;
 
 %% Get filepaths 
 filelist = dir(BASEPATH);
@@ -14,6 +14,7 @@ fprintf('%d sessions detected.\n', numel(sessionPaths));
 fprintf(strcat(repmat('=', 1, 80), '\n'));
 
 vals = cell(0);
+temp = [];
 
 for session = 1 : numel(sessionPaths)
     tankName = cell2mat(sessionPaths{session});
@@ -114,16 +115,52 @@ for session = 1 : numel(sessionPaths)
         case 10
             % 10 : Event1 vs Event2: robot NP vs. robot P
             % RobotNP_RobotP_pred
-            eventTime1 = double([eventData([eventData.Robot] == 1).NP]);
-            eventTime2 = double([eventData([eventData.Robot] == 1).P]);
+            eventTime1 = [];
+            eventTime2 = [];
+
+            for i = 1 : size(eventDataRaw,1)
+                if ... % Robot session + P 
+                        eventDataRaw.Robot(i) == 1 &...
+                        eventDataRaw.PelletType(i) == "P"
+                    eventTime1 = [eventTime1; double(eventDataRaw.Time_ms(i))];
+                end
+
+                if ... % Robot session + NP
+                        eventDataRaw.Robot(i) == 1 &...
+                        eventDataRaw.PelletType(i) == "NP" 
+                    eventTime2 = [eventTime2; double(eventDataRaw.Time_ms(i))];
+                end
+            end
+            if numel(eventTime1) < 3 | numel(eventTime2) <3
+                fprintf("Skipped due to small event number\n");
+                continue;
+            end
             [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
                 [-10000, 0], 100, 1000, 100);
             save(fullfile(tankPath,"RobotNP_RobotP_pred.mat"), "X", "y", "region");
         case 11
             % 11 : Event1 vs Event2: robot NP vs. robot P
             % RobotNP_RobotP_pred2
-            eventTime1 = double([eventData([eventData.Robot] == 1).NP]);
-            eventTime2 = double([eventData([eventData.Robot] == 1).P]);
+            eventTime1 = [];
+            eventTime2 = [];
+
+            for i = 1 : size(eventDataRaw,1)
+                if ... % Robot session + P 
+                        eventDataRaw.Robot(i) == 1 &...
+                        eventDataRaw.PelletType(i) == "P"
+                    eventTime1 = [eventTime1; double(eventDataRaw.Time_ms(i))];
+                end
+
+                if ... % Robot session + NP
+                        eventDataRaw.Robot(i) == 1 &...
+                        eventDataRaw.PelletType(i) == "NP" 
+                    eventTime2 = [eventTime2; double(eventDataRaw.Time_ms(i))];
+                end
+            end
+            if numel(eventTime1) < 3 | numel(eventTime2) <3
+                fprintf("Skipped due to small event number\n");
+                continue;
+            end
             [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
                 [-6000, -2000], 100, 1000, 100);
             save(fullfile(tankPath,"RobotNP_RobotP_pred2.mat"), "X", "y", "region");
@@ -159,6 +196,35 @@ for session = 1 : numel(sessionPaths)
             [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
                 [-10000, 0000], 100, 1000, 100);
             save(fullfile(tankPath,"PreRobotP_RobotNP_10sec.mat"), "X", "y", "region");
+        case 16
+            % 16 : Event1 vs Event2: robot NP vs. P using data right after P
+            % RobotNP_RobotP_using_postP
+            % Using data right after P, predict whether the animal will
+            % approach again in the next attempt or give up
+            eventTime1 = [];
+            eventTime2 = [];
+            for i = 1 : size(eventDataRaw,1) - 1
+                if ... % Robot session + P + Next is also P
+                        eventDataRaw.Robot(i) == 1 &...
+                        eventDataRaw.PelletType(i) == "P" &...
+                        eventDataRaw.PelletType(i+1) == "P"
+                    eventTime1 = [eventTime1; double(eventDataRaw.Time_ms(i))];
+                end
+
+                if ... % Robot session + P + Next is changed to NP
+                        eventDataRaw.Robot(i) == 1 &...
+                        eventDataRaw.PelletType(i) == "P" &...
+                        eventDataRaw.PelletType(i+1) == "NP"
+                    eventTime2 = [eventTime2; double(eventDataRaw.Time_ms(i))];
+                end
+            end
+            if numel(eventTime1) < 3 | numel(eventTime2) <3
+                fprintf("Skipped due to small event number\n");
+                continue;
+            end
+            [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
+                [0000, 4000], 100, 1000, 100);
+            save(fullfile(tankPath,"RobotNP_RobotP_using_postP.mat"), "X", "y", "region");
     end
 
 end

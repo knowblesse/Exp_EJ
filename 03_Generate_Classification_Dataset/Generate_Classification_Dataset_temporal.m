@@ -40,8 +40,12 @@ for session = 1 : numel(sessionPaths)
     for idx_range = 1 : 10
         % 10 : Event1 vs Event2: robot NP vs. robot P
         % RobotNP_RobotP
-        eventTime1 = double([eventData([eventData.Robot] == 1).NP]);
-        eventTime2 = double([eventData([eventData.Robot] == 1).P]);
+        eventTime1 = double(eventDataRaw.Time_ms(eventDataRaw.Robot == 1 & eventDataRaw.PelletType == "P"));
+        eventTime2 = double(eventDataRaw.Time_ms(eventDataRaw.Robot == 1 & eventDataRaw.PelletType == "NP"));
+        if numel(eventTime1) < 3 | numel(eventTime2) <3
+            fprintf("Skipped due to small event number\n");
+            continue;
+        end
         [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
             ranges(idx_range, :), 100, 1000, 100);
         save(fullfile(tankPath,"RobotNP_RobotP_" + num2str(ranges(idx_range, 1)/1000) + "_" + num2str(ranges(idx_range, 2)/1000) + ".mat"), "X", "y", "region");
