@@ -4,109 +4,124 @@ from sklearn.svm import LinearSVC
 from scipy.io import loadmat
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import LeaveOneOut, cross_val_score, permutation_test_score, cross_val_predict
+from sklearn.model_selection import LeaveOneOut, cross_val_predict
 from sklearn.metrics import balanced_accuracy_score
 import csv
 
-import warnings
-warnings.filterwarnings('ignore', message='y_pred contains classes not in y_true')
-warnings.filterwarnings('ignore', message='A single label was found')
+single_unit_datapoint = 40  # 4 sec * 100ms bins = 40 features per single unit
 
-single_unit_datapoint = 40 # number of features per single unit (4 sec * 100ms bins = 40)
+TIME_WINDOWS = [(-7, -3), (-6, -2), (-5, -1), (-4, 0), (-3, 1),
+                (-2, 2), (-1, 3), (0, 4), (1, 5), (2, 6)]
+
+
+def loo_score_with_null(X, y, n_shuffles=100, random_state=516):
+    """Run LOO classification and a label-shuffle null distribution."""
+    clf = make_pipeline(
+        StandardScaler(with_mean=True),
+        LinearSVC(C=1.0, class_weight='balanced', dual=True, random_state=0)
+    )
+    cv = LeaveOneOut()
+
+    # True accuracy
+    y_pred = cross_val_predict(clf, X, y, cv=cv, n_jobs=-1)
+    acc = balanced_accuracy_score(y, y_pred)
+
+    # Null distribution
+    rng = np.random.RandomState(random_state)
+    null_dist = np.empty(n_shuffles)
+    for i in range(n_shuffles):
+        y_shuf = rng.permutation(y)
+        y_pred_shuf = cross_val_predict(clf, X, y_shuf, cv=cv, n_jobs=-1)
+        null_dist[i] = balanced_accuracy_score(y_shuf, y_pred_shuf)
+
+    return acc, float(np.mean(null_dist))
+
 
 def run_classification(matlab_dataset_path):
-    # Load matlab data
+    """Returns (acc_bla, null_bla_mean, acc_pfc, null_pfc_mean) or all-NaN if skipped."""
     data = loadmat(matlab_dataset_path)
     X = np.asarray(data.get('X'), dtype=float)
+    X = np.clip(X, -5, 5)
     y = np.ravel(data.get('y')).astype(int)
     isPFC = np.ravel(data.get('region')).astype(int)
 
-    # Check minimum number of events
+    # Sample-size guards
+    if np.sum(isPFC == 0) < 3 or np.sum(isPFC == 1) < 3:
+        return np.nan, np.nan, np.nan, np.nan
     for lb in np.unique(y):
         if np.sum(y == lb) < 3:
-            print(f"Not enough samples for label {lb} in {matlab_dataset_path.name} {np.sum(lb == y)}. Skipping session.")
-            return np.nan, np.nan, np.nan, np.nan, np.sum(isPFC == 0), np.sum(isPFC == 1)
+            print(f"Not enough samples for label {lb} in {matlab_dataset_path.name}. Skipping.")
+            return np.nan, np.nan, np.nan, np.nan
 
-    # Clip
-    X = np.clip(X, -5, 5)
-
-    # Raise error if nan in data
     if np.isnan(X).any() or np.isnan(y).any():
         raise ValueError("NaN values found in the dataset.")
 
-    # Use Leave-One-Out method
-    clf_bla = make_pipeline(
-        StandardScaler(with_mean=True),
-        LinearSVC(C=1.0, class_weight='balanced', dual=True, random_state=0)
-    ) # features >> samples => dual should be True
+    split = np.where(isPFC)[0][0] * single_unit_datapoint
+    X_bla = X[:, :split]
+    X_pfc = X[:, split:]
 
-    clf_pfc = make_pipeline(
-        StandardScaler(with_mean=True),
-        LinearSVC(C=1.0, class_weight='balanced', dual=True, random_state=0)
-    )  # features >> samples => dual should be True
+    acc_bla, null_bla = loo_score_with_null(X_bla, y)
+    acc_pfc, null_pfc = loo_score_with_null(X_pfc, y)
 
-    cv_bla = LeaveOneOut()
-    cv_pfc = LeaveOneOut()
+    return acc_bla, null_bla, acc_pfc, null_pfc
 
-    # Check minimum number of neurons (3)
-    if np.sum(isPFC == 0) < 3:
-        perm_scores_bla = np.nan
-        mean_acc_bla = np.nan
-    else:
-        # LOO accuracy
-        y_pred_bla = cross_val_predict(clf_bla, X[:, :np.where(isPFC)[0][0] * single_unit_datapoint], y, cv=cv_bla, n_jobs=-1)
-        mean_acc_bla = balanced_accuracy_score(y, y_pred_bla)
-
-        # Permutation test (how often chance beats your score)
-        # BLA always comes first
-        score, perm_scores_bla, pval = permutation_test_score(
-            clf_bla, X[:, :np.where(isPFC)[0][0] * single_unit_datapoint], y, cv=cv_bla, scoring='balanced_accuracy',
-            n_permutations=100, n_jobs=-1, random_state=0
-        )
-
-    if np.sum(isPFC == 1) < 3:
-        perm_scores_pfc = np.nan
-        mean_acc_pfc = np.nan
-    else:
-        y_pred_pfc = cross_val_predict(clf_bla, X[:, np.where(isPFC)[0][0] * single_unit_datapoint:], y, cv=cv_bla, n_jobs=-1)
-        mean_acc_pfc = balanced_accuracy_score(y, y_pred_pfc)
-
-        # Permutation test (how often chance beats your score)
-        score, perm_scores_pfc, pval = permutation_test_score(
-            clf_pfc, X[:, np.where(isPFC)[0][0] * single_unit_datapoint:], y, cv=cv_pfc, scoring='balanced_accuracy',
-            n_permutations=100, n_jobs=-1, random_state=0
-        )
-
-    return mean_acc_bla, np.mean(perm_scores_bla), mean_acc_pfc, np.mean(perm_scores_pfc), np.sum(isPFC == 0), np.sum(isPFC == 1)
 
 if __name__ == "__main__":
     BASE_PATH = Path(r"H:\Data\Kim Data")
-    for idx in [(-7, -3), (-6, -2), (-5, -1), (-4, 0), (-3, 1), (-2, 2), (-1, 3), (0, 4), (1, 5), (2, 6)]:
-        dataset_name = 'RobotNP_RobotP_' + str(idx[0]) + '_' + str(idx[1])
+    session_paths = sorted(list(BASE_PATH.glob('@*')))
 
-        session_paths = sorted(list(BASE_PATH.glob('@*')))
+    # Storage: {session_name: {window_idx: (acc_bla, null_bla, acc_pfc, null_pfc)}}
+    results = {sp.name: {} for sp in session_paths}
 
-        rows = []
+    for w_idx, (t0, t1) in enumerate(TIME_WINDOWS):
+        dataset_name = f'RobotNP_RobotP_{t0}_{t1}'
+        print(f"\n=== Window {w_idx+1}/{len(TIME_WINDOWS)}: {dataset_name} ===")
+
         for i, session_path in enumerate(session_paths, 1):
-
             mat_path = next(session_path.glob(dataset_name + '.mat'), None)
             if mat_path is None:
-                print(f"No dataset found in {session_path}")
+                print(f"  No dataset found in {session_path.name}")
                 continue
-            acc_bla, acc_bla_random, acc_pfc, acc_pfc_random, numBLA, numPFC = run_classification(mat_path)
-            if np.isnan(acc_bla):
-                continue
-            rows.append([session_path.name, f"{acc_bla_random:.4f}", f"{acc_bla:.4f}", f"{acc_pfc_random:.4f}", f"{acc_pfc:.4f}", f"{numBLA:d}", f"{numPFC:d}"])
-            print(f"Session {i}/{len(session_paths)}: {session_path.name}")
 
-        out_path = BASE_PATH / (dataset_name + '_split_results.csv')
+            acc_bla, null_bla, acc_pfc, null_pfc = run_classification(mat_path)
+            results[session_path.name][w_idx] = (acc_bla, null_bla, acc_pfc, null_pfc)
+            print(f"  Session {i}/{len(session_paths)}: {session_path.name}")
+
+    # Build per-region CSVs
+    # Layout: Session, T1_Random, T1_Real, T2_Random, T2_Real, ..., T10_Random, T10_Real
+    def write_region_csv(out_path, region_idx_acc, region_idx_null):
+        header = ['Session']
+        for (t0, t1) in TIME_WINDOWS:
+            header.append(f'T({t0},{t1})_Random')
+            header.append(f'T({t0},{t1})_Real')
+
+        rows = []
+        for session_name in sorted(results.keys()):
+            session_data = results[session_name]
+            # Skip session if it has no successful windows
+            if not session_data:
+                continue
+            # Skip session if any window was NaN (sample-size guard tripped)
+            # — keeps Prism paste clean. Comment out if you want to keep partial sessions.
+            if any(np.isnan(session_data.get(w, (np.nan,)*4)[region_idx_acc])
+                   for w in range(len(TIME_WINDOWS))):
+                print(f"Skipping {session_name}: incomplete across windows")
+                continue
+
+            row = [session_name]
+            for w_idx in range(len(TIME_WINDOWS)):
+                acc_b, null_b, acc_p, null_p = session_data[w_idx]
+                acc_val = (acc_b, acc_p)[region_idx_acc == 2]
+                null_val = (null_b, null_p)[region_idx_null == 3]
+                row.append(f"{null_val:.4f}")
+                row.append(f"{acc_val:.4f}")
+            rows.append(row)
+
         with open(out_path, 'w', newline='') as f:
             w = csv.writer(f)
-            w.writerow(['Session', 'Accuracy(BLA random)', 'Accuracy(BLA)', 'Accuracy(PFC random)', 'Accuracy(PFC)', 'NumBLA', 'NumPFC'])
+            w.writerow(header)
             w.writerows(rows)
-        print(f"Results saved to {out_path}")
+        print(f"Wrote {out_path} ({len(rows)} sessions)")
 
-
-
-
-
+    write_region_csv(BASE_PATH / 'temporal_BLA.csv', region_idx_acc=0, region_idx_null=1)
+    write_region_csv(BASE_PATH / 'temporal_PFC.csv', region_idx_acc=2, region_idx_null=3)
