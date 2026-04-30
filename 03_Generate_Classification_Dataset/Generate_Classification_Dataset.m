@@ -4,7 +4,7 @@
 
 %% Set Variables
 BASEPATH = "H:\Data\Kim Data";
-n = 11;
+n = 17;
 
 %% Get filepaths 
 filelist = dir(BASEPATH);
@@ -225,6 +225,33 @@ for session = 1 : numel(sessionPaths)
             [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
                 [0000, 4000], 100, 1000, 100);
             save(fullfile(tankPath,"RobotNP_RobotP_using_postP.mat"), "X", "y", "region");
+
+        case 17
+            % 11 : Event1 vs Event2: robot NP vs. robot P
+            % RobotNP_RobotP
+            eventTime1 = [];
+            eventTime2 = [];
+
+            for i = 1 : size(eventDataRaw,1)
+                if ... % Robot session + P 
+                        eventDataRaw.Robot(i) == 1 &...
+                        eventDataRaw.PelletType(i) == "P"
+                    eventTime1 = [eventTime1; double(eventDataRaw.Time_ms(i))];
+                end
+
+                if ... % Robot session + NP
+                        eventDataRaw.Robot(i) == 1 &...
+                        eventDataRaw.PelletType(i) == "NP" 
+                    eventTime2 = [eventTime2; double(eventDataRaw.Time_ms(i))];
+                end
+            end
+            if numel(eventTime1) < 3 | numel(eventTime2) <3
+                fprintf("Skipped due to small event number\n");
+                continue;
+            end
+            [X, y, region] = generateEventClassifierDataset(tankPath, eventTime1, eventTime2, ...
+                [-2000, 2000], 100, 1000, 100);
+            save(fullfile(tankPath,"RobotNP_RobotP.mat"), "X", "y", "region");
     end
 
 end
