@@ -81,7 +81,7 @@ for unitFilePath = unitFilePaths
 end
 numUnit = size(unitData, 1);
 clearvars numunit i unitfilepath unittype unitfilepaths temp_ numUnit_
-fprintf("generateEventclassifierdataset : all unit data loaded\n");
+fprintf("generateEventClassifierDataset : all unit data loaded\n");
 
 %% Generate gaussian kernel
 kernel = gausswin(ceil(kernel_size/2)*2-1, (kernel_size - 1) / (2 * kernel_std)); % kernel size is changed into an odd number for symmetrical kernel application. see Matlab gausswin docs for the second parameter.
