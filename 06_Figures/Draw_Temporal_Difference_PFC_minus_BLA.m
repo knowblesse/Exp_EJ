@@ -4,7 +4,7 @@
 % Paired difference per session, mean + SEM band, with Sidak-corrected stars.
 
 %% Inputs
-PARENT_PATH = 'H:\Data\Kim Data\PreRobotNP_PreRobotP';
+PARENT_PATH = 'H:\Data\Kim Data\robot_iti_iti_2s';
 BLA_CSV = fullfile(PARENT_PATH, 'temporal_BLA.csv');
 PFC_CSV = fullfile(PARENT_PATH, 'temporal_PFC.csv');
 
@@ -38,7 +38,9 @@ AXES_WIDTH_MM    = 76;
 AXES_HEIGHT_MM   = 51;
 
 %% Time windows
-TIME_WINDOWS = [-7 -3; -6 -2; -5 -1; -4 0; -3 1; -2 2; -1 3; 0 4; 1 5; 2 6];
+%TIME_WINDOWS = [-7 -3; -6 -2; -5 -1; -4 0; -3 1; -2 2; -1 3; 0 4; 1 5; 2 6];
+%TIME_WINDOWS = [-8 -6; -6 -4; -4 -2; -2 0; 0 2; 2 4; 4 6; 6 8];
+TIME_WINDOWS = [-8 -6; -6 -4; -4 -2; -2 0; 0 2; 2 4; 4 6; 6 8; 8 10; 10 12];
 n_win = size(TIME_WINDOWS, 1);
 x = 1:n_win;
 xtick_labels = arrayfun(@(i) sprintf('%d ~ %d', TIME_WINDOWS(i,1), TIME_WINDOWS(i,2)), ...

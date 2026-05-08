@@ -5,16 +5,16 @@
 % Random condition shown as two gray lines (one per region).
 
 %% Inputs
-PARENT_PATH = 'H:\Data\Kim Data\RobotNP_RobotP';
+PARENT_PATH = 'H:\Data\Kim Data\robot_iti_iti_2s';
 BLA_CSV = fullfile(PARENT_PATH, 'temporal_BLA.csv');
 PFC_CSV = fullfile(PARENT_PATH, 'temporal_PFC.csv');
 
 %% Title
-PLOT_TITLE = 'Pellet type (pre-robot)';
+PLOT_TITLE = 'Pellet Type (robot) ITI';
 
 %% Style
-COLOR_BLA_REAL = '#9F044D';     % red
-COLOR_PFC_REAL = '#056943';     % green
+COLOR_BLA_REAL = '#E783B2';     % red
+COLOR_PFC_REAL = '#7AA6A6';     % green
 COLOR_BLA_RAND = '#999999';     % gray
 COLOR_PFC_RAND = '#666666';     % darker gray
 
@@ -29,7 +29,7 @@ DOT_SIZE    = 5;                % mean dot size (MarkerSize, points)
 AXIS_LW     = 1.44;             % axis line thickness (pt)
 FONT_NAME   = 'Arial';
 FONT_SIZE   = 12;
-FONT_WEIGHT = 'bold';
+FONT_WEIGHT = 'normal';
 
 TITLE_SIZE  = 13.92;            % title size (pt), Arial Bold
 
@@ -44,16 +44,22 @@ FIG_WIDTH_MM    = 130.91;       % figure width (axes + legend)
 
 %% Significance stars per window (length must equal number of windows)
 % 0 = no star, 1 = '*', 2 = '**', 3 = '***'
-STARS_BLA = [0 2 1 2 3 3 3 3 3 3];
-STARS_PFC = [0 1 1 3 3 3 3 3 3 3];
-
+% STARS_BLA = [0 1 1 2 3 3 3 3 3 3];
+% STARS_PFC = [0 0 0 2 2 3 3 3 3 3];
+%STARS_BLA = [0 0 0 0 3 2 3 3];
+%STARS_PFC = [0 0 1 2 3 3 3 3];
+STARS_BLA = [0 0 0 0 3 2 2 3 0 0];
+STARS_PFC = [0 0 0 1 3 3 2 1 2 2];
 %% Time windows
-TIME_WINDOWS = [-7 -3; -6 -2; -5 -1; -4 0; -3 1; -2 2; -1 3; 0 4; 1 5; 2 6];
+%TIME_WINDOWS = [-7 -3; -6 -2; -5 -1; -4 0; -3 1; -2 2; -1 3; 0 4; 1 5; 2 6];
+%TIME_WINDOWS = [-8 -6; -6 -4; -4 -2; -2 0; 0 2; 2 4; 4 6; 6 8];
+TIME_WINDOWS = [-8 -6; -6 -4; -4 -2; -2 0; 0 2; 2 4; 4 6; 6 8; 8 10; 10 12];
 n_win = size(TIME_WINDOWS, 1);
 x = 1:n_win;
-xtick_labels = arrayfun(@(i) sprintf('%d ~ %d', TIME_WINDOWS(i,1), TIME_WINDOWS(i,2)), ...
+% xtick_labels = arrayfun(@(i) sprintf('%d ~ %d', TIME_WINDOWS(i,1), TIME_WINDOWS(i,2)), ...
+%                         1:n_win, 'UniformOutput', false);
+xtick_labels = arrayfun(@(i) sprintf('%d', (TIME_WINDOWS(i,2) + TIME_WINDOWS(i,1))/2), ...
                         1:n_win, 'UniformOutput', false);
-
 %% Load data
 bla_T = readtable(BLA_CSV);
 pfc_T = readtable(PFC_CSV);
@@ -167,16 +173,16 @@ ylabel(ax, 'Balanced Accuracy', ...
 xticks(ax, x);
 xticklabels(ax, xtick_labels);
 xlim(ax, [0.5 n_win+0.5]);
-ax.XTickLabelRotation = 45;
+%ax.XTickLabelRotation = 45;
 ax.Box = 'off';
 
 % Title
-title(ax, PLOT_TITLE, 'FontName', FONT_NAME, 'FontSize', TITLE_SIZE, 'FontWeight', 'bold');
+title(ax, PLOT_TITLE, 'FontName', FONT_NAME, 'FontSize', TITLE_SIZE, 'FontWeight', 'normal');
 
 % Y-axis: 0.1 spacing
 ylim(ax, [0.4, 0.9]);
 yticks(ax, 0.4:0.1:0.9);
-
+xline(4.5, 'Color', 'r', 'LineStyle', '--')
 legend(ax, [h_bla_rand, h_pfc_rand, h_bla_real, h_pfc_real], ...
     {'BLA Random', 'PFC Random', 'BLA Real', 'PFC Real'}, ...
     'Location', 'eastoutside', 'Box', 'off', ...
