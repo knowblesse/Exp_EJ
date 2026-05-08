@@ -96,8 +96,8 @@ y = zeros(numel(eventTime1) + numel(eventTime2), 1);
 
 %% Load Unit and apply Generate Serial Data from spike timestamps(fs:1000)
 for u = 1 : numUnit
-    % use max(10s from the last spike, 10s from the last NP) as the length of the serial data
-    serial_data = zeros(max(round(unitData.time_ms{u}(end)), max(eventTime1(end), eventTime2(end)) + 10000),1);
+    % use max(20s from the last spike, 20s from the last NP) as the length of the serial data
+    serial_data = zeros(max(round(unitData.time_ms{u}(end)), max(eventTime1(end), eventTime2(end)) + 20000),1);
     
     % set 1 for every spike timepoint. But only take positive values
     serial_data(round(unitData.time_ms{u})) = 1;
