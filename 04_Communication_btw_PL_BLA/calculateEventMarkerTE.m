@@ -52,17 +52,20 @@ marker1_range = [0, event_duration];
 % 2. Pre-robot NP: -6 ~ 0 sec from NP
 marker2_range = [-event_duration, 0];
 
-% 3. After-attack: 0 ~ +6 sec from attack
-marker3_range = [0, event_duration];
+% 3. Before-attack: -6 ~ 0 sec from attack
+marker3_range = [-event_duration, 0];
 
-% 4. NP-robot: -6 ~ 0 sec from NP during robot
-marker4_range = [-event_duration, 0];
+% 4. After-attack: 0 ~ +6 sec from attack
+marker4_range = [0, event_duration];
 
-num_marker = 4;
-marker_names = {'Control', 'PreRobotNP', 'AfterAttack', 'NP_Robot'};
-all_marker_times = {marker1_times, pre_robot_NP_times, attack_times, robot_NP_times};
-marker_ranges = {marker1_range, marker2_range, marker3_range, marker4_range};
-needs_subsample = [false, true, true, true];
+% 5. NP-robot: -6 ~ 0 sec from NP during robot
+marker5_range = [-event_duration, 0];
+
+num_marker = 5;
+marker_names = {'Control', 'PreRobotNP', 'BeforeAttack', 'AfterAttack', 'NP_Robot'};
+all_marker_times = {marker1_times, pre_robot_NP_times, attack_times, attack_times, robot_NP_times};
+marker_ranges = {marker1_range, marker2_range, marker3_range, marker4_range, marker5_range};
+needs_subsample = [false, true, true, true, true];
 
 
 %% Read unit file

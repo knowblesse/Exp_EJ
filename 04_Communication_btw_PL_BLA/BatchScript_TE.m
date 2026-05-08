@@ -47,7 +47,7 @@ fprintf("BatchScript: All Complete! %d sessions processed.\n", numel(all_outputs
 
 %% Build results table (one row per session)
 results = table();
-marker_names = {'Control', 'PreRobotNP', 'AfterAttack', 'NP_Robot'};
+marker_names = {'Control', 'PreRobotNP', 'BeforeAttack', 'AfterAttack', 'NP_Robot'};
 
 for i = 1:numel(all_outputs)
     o = all_outputs{i};
